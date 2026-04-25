@@ -7,6 +7,7 @@ interface PromptComposerProps {
   onChange: (value: string) => void
   ariaLabel: string
   className?: string
+  animateIdeas?: boolean
 }
 
 function ArrowUpIcon() {
@@ -30,12 +31,20 @@ export default function PromptComposer({
   onChange,
   ariaLabel,
   className = '',
+  animateIdeas = true,
 }: PromptComposerProps) {
   const [ideaIndex, setIdeaIndex] = useState(0)
   const [typedIdea, setTypedIdea] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
+    if (!animateIdeas || promptIdeas.length === 0) {
+      setTypedIdea('')
+      setIsDeleting(false)
+      setIdeaIndex(0)
+      return
+    }
+
     const currentIdea = promptIdeas[ideaIndex]
     const isComplete = typedIdea === currentIdea
     const isEmpty = typedIdea.length === 0
@@ -63,7 +72,7 @@ export default function PromptComposer({
     }, delay)
 
     return () => window.clearTimeout(timeoutId)
-  }, [ideaIndex, isDeleting, promptIdeas, typedIdea])
+  }, [animateIdeas, ideaIndex, isDeleting, promptIdeas, typedIdea])
 
   return (
     <section className={`prompt-card${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
@@ -83,12 +92,16 @@ export default function PromptComposer({
                 <span className="prompt-card__placeholder-prefix">
                   {promptPrefix}
                 </span>
-                <span className="prompt-card__placeholder-text">
-                  {typedIdea}
-                </span>
-                <span className="prompt-card__cursor" aria-hidden="true">
-                  |
-                </span>
+                {animateIdeas ? (
+                  <>
+                    <span className="prompt-card__placeholder-text">
+                      {typedIdea}
+                    </span>
+                    <span className="prompt-card__cursor" aria-hidden="true">
+                      |
+                    </span>
+                  </>
+                ) : null}
               </span>
             ) : null}
           </label>
