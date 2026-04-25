@@ -656,6 +656,23 @@
     var(--surface);
 }
 
+.graph-canvas--sigma {
+  position: relative;
+  height: 520px;
+  padding: 0;
+}
+
+.sigma-container {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.sigma-container canvas {
+  background: transparent !important;
+}
+
 .graph-canvas-empty {
   display: flex;
   flex-direction: column;
@@ -706,6 +723,21 @@
   font-size: 0.85rem;
   color: var(--text-soft);
   margin: 0;
+}
+
+.graph-node-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin: 0 0 4px;
+}
+
+.graph-node-domain {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .graph-legend,
