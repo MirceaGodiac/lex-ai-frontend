@@ -1,13 +1,29 @@
-import { useState, useCallback } from 'react'
-import SigmaGraphRenderer from '../components/explore/SigmaGraphRenderer'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import Graph from 'graphology'
+import Sigma from 'sigma'
 import type { GraphNode, GraphEdge } from '../types/graph'
+import { buildGraphologyGraph } from '../lib/graph/graphology-builders'
 
-const legendNodes = [
-  { label: 'Case', color: 'var(--accent)' },
-  { label: 'Statute', color: '#7c5cbc' },
-  { label: 'Party', color: '#c07a2e' },
-  { label: 'Court', color: '#2e7ab5' },
-]
+const NODE_TYPES = ['root', 'domain', 'legal_act', 'case', 'party', 'court'] as const
+type NodeTypeStr = (typeof NODE_TYPES)[number]
+
+const NODE_TYPE_LABELS: Record<NodeTypeStr, string> = {
+  root: 'Root',
+  domain: 'Domain',
+  legal_act: 'Legal Act',
+  case: 'Case',
+  party: 'Party',
+  court: 'Court',
+}
+
+const NODE_TYPE_COLORS: Record<NodeTypeStr, string> = {
+  root: '#ffffff',
+  domain: '#3b82f6',
+  legal_act: '#94a3b8',
+  case: '#ef459d',
+  party: '#c07a2e',
+  court: '#2e7ab5',
+}
 
 const mockNodes: GraphNode[] = [
   { id: 'root-1', label: 'Romanian Law', type: 'root' },
@@ -60,16 +76,140 @@ function getNeighborLabels(nodeId: string): string[] {
     })
 }
 
+// Shared reducer state read from refs so sigma closure always sees fresh values
+interface ReducerState {
+  activeFilters: Set<string>
+  hoveredNode: string | null
+  selectedNode: string | null
+}
+
 function GraphPage() {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const sigmaRef = useRef<Sigma | null>(null)
+  const graphRef = useRef<Graph | null>(null)
+  const reducerStateRef = useRef<ReducerState>({
+    activeFilters: new Set(NODE_TYPES),
+    hoveredNode: null,
+    selectedNode: null,
+  })
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(NODE_TYPES))
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
-  const handleNodeClick = useCallback((nodeId: string) => {
-    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId))
+  // Init sigma once on mount
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const graph = buildGraphologyGraph(mockNodes, mockEdges)
+    graphRef.current = graph
+
+    const sigma = new Sigma(graph, containerRef.current, {
+      renderEdgeLabels: false,
+      defaultEdgeColor: 'rgba(255,255,255,0.18)',
+      nodeReducer: (node, data) => {
+        const { activeFilters: filters, hoveredNode: hovered, selectedNode: selected } =
+          reducerStateRef.current
+
+        const nodeType = NODE_INDEX.get(node)?.type ?? ''
+        if (!filters.has(nodeType)) {
+          return { ...data, hidden: true }
+        }
+
+        const result = { ...data }
+
+        if (hovered) {
+          const isNeighbor = graph.neighbors(hovered).includes(node)
+          if (node !== hovered && !isNeighbor) {
+            result.color = '#1e293b'
+            result.size = (data.size as number) * 0.6
+            result.zIndex = 0
+          } else {
+            result.zIndex = 1
+          }
+        }
+
+        if (selected === node) {
+          result.color = '#f1f5f9'
+          result.size = (data.size as number) * 1.3
+          result.zIndex = 1
+        }
+
+        return result
+      },
+      edgeReducer: (edge, data) => {
+        const { hoveredNode: hovered } = reducerStateRef.current
+        if (hovered) {
+          const src = graph.source(edge)
+          const tgt = graph.target(edge)
+          if (src !== hovered && tgt !== hovered) {
+            return { ...data, color: '#0f172a', size: 0.4 }
+          }
+          return { ...data, color: '#64748b', size: 2 }
+        }
+        return data
+      },
+    })
+
+    sigmaRef.current = sigma
+
+    sigma.on('enterNode', ({ node }) => {
+      setHoveredNode(node)
+      containerRef.current!.style.cursor = 'pointer'
+    })
+    sigma.on('leaveNode', () => {
+      setHoveredNode(null)
+      containerRef.current!.style.cursor = 'default'
+    })
+    sigma.on('clickNode', ({ node }) =>
+      setSelectedNodeId(prev => (prev === node ? null : node)),
+    )
+    sigma.on('clickStage', () => setSelectedNodeId(null))
+
+    return () => {
+      sigma.kill()
+      sigmaRef.current = null
+      graphRef.current = null
+    }
   }, [])
 
-  const handleStageClick = useCallback(() => {
-    setSelectedNodeId(null)
+  // Sync reducer state ref and refresh sigma whenever interaction state changes
+  useEffect(() => {
+    reducerStateRef.current = { activeFilters, hoveredNode, selectedNode: selectedNodeId }
+    sigmaRef.current?.refresh()
+  }, [activeFilters, hoveredNode, selectedNodeId])
+
+  // Search: animate camera to first matching node
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query)
+    const sigma = sigmaRef.current
+    const graph = graphRef.current
+    if (!query.trim() || !sigma || !graph) return
+
+    let foundNode: string | undefined
+    graph.forEachNode((node, attrs) => {
+      if (!foundNode && (attrs.label as string).toLowerCase().includes(query.toLowerCase())) {
+        foundNode = node
+      }
+    })
+
+    if (foundNode) {
+      const nodeData = sigma.getNodeDisplayData(foundNode)
+      if (nodeData) {
+        sigma.getCamera().animate({ x: nodeData.x, y: nodeData.y, ratio: 0.35 }, { duration: 600 })
+      }
+    }
   }, [])
+
+  const toggleFilter = (type: string) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
+      return next
+    })
+  }
 
   const selectedNode = selectedNodeId ? NODE_INDEX.get(selectedNodeId) : null
   const neighbors = selectedNodeId ? getNeighborLabels(selectedNodeId) : []
@@ -89,24 +229,61 @@ function GraphPage() {
             type="text"
             placeholder="Search nodes…"
             aria-label="Search graph nodes"
+            value={searchQuery}
+            onChange={e => handleSearch(e.target.value)}
           />
         </div>
         <div className="graph-toolbar-actions">
-          <button className="graph-btn" aria-label="Zoom in">+</button>
-          <button className="graph-btn" aria-label="Zoom out">−</button>
-          <button className="graph-btn graph-btn-wide" aria-label="Fit view">Fit</button>
-          <button className="graph-btn graph-btn-wide" aria-label="Reset">Reset</button>
+          <button
+            className="graph-btn"
+            aria-label="Zoom in"
+            onClick={() => {
+              const cam = sigmaRef.current?.getCamera()
+              if (cam) cam.animate({ ratio: cam.ratio / 1.5 }, { duration: 300 })
+            }}
+          >
+            +
+          </button>
+          <button
+            className="graph-btn"
+            aria-label="Zoom out"
+            onClick={() => {
+              const cam = sigmaRef.current?.getCamera()
+              if (cam) cam.animate({ ratio: cam.ratio * 1.5 }, { duration: 300 })
+            }}
+          >
+            −
+          </button>
+          <button
+            className="graph-btn graph-btn-wide"
+            aria-label="Fit view"
+            onClick={() =>
+              sigmaRef.current
+                ?.getCamera()
+                .animate({ x: 0, y: 0, ratio: 1, angle: 0 }, { duration: 400 })
+            }
+          >
+            Fit
+          </button>
+          <button
+            className="graph-btn graph-btn-wide"
+            aria-label="Reset"
+            onClick={() => {
+              sigmaRef.current
+                ?.getCamera()
+                .animate({ x: 0, y: 0, ratio: 1, angle: 0 }, { duration: 400 })
+              setSelectedNodeId(null)
+              setSearchQuery('')
+            }}
+          >
+            Reset
+          </button>
         </div>
       </div>
 
       <div className="graph-workspace">
-        <div className="graph-canvas info-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <SigmaGraphRenderer
-            nodes={mockNodes}
-            edges={mockEdges}
-            onNodeClick={handleNodeClick}
-            onStageClick={handleStageClick}
-          />
+        <div className="graph-canvas info-card graph-canvas--sigma">
+          <div ref={containerRef} className="sigma-container" />
         </div>
 
         <aside className="graph-sidebar">
@@ -145,10 +322,13 @@ function GraphPage() {
           <article className="info-card graph-sidebar-card">
             <h2>Legend</h2>
             <ul className="graph-legend">
-              {legendNodes.map((item) => (
-                <li key={item.label} className="graph-legend-item">
-                  <span className="graph-legend-dot" style={{ background: item.color }} />
-                  {item.label}
+              {NODE_TYPES.map(type => (
+                <li key={type} className="graph-legend-item">
+                  <span
+                    className="graph-legend-dot"
+                    style={{ background: NODE_TYPE_COLORS[type] }}
+                  />
+                  {NODE_TYPE_LABELS[type]}
                 </li>
               ))}
             </ul>
@@ -157,12 +337,19 @@ function GraphPage() {
           <article className="info-card graph-sidebar-card">
             <h2>Filters</h2>
             <ul className="graph-filter-list">
-              {legendNodes.map((item) => (
-                <li key={item.label} className="graph-filter-item">
+              {NODE_TYPES.map(type => (
+                <li key={type} className="graph-filter-item">
                   <label className="graph-filter-label">
-                    <input type="checkbox" defaultChecked />
-                    <span className="graph-legend-dot" style={{ background: item.color }} />
-                    {item.label}
+                    <input
+                      type="checkbox"
+                      checked={activeFilters.has(type)}
+                      onChange={() => toggleFilter(type)}
+                    />
+                    <span
+                      className="graph-legend-dot"
+                      style={{ background: NODE_TYPE_COLORS[type] }}
+                    />
+                    {NODE_TYPE_LABELS[type]}
                   </label>
                 </li>
               ))}

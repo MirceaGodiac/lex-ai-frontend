@@ -793,6 +793,23 @@
     var(--surface);
 }
 
+.graph-canvas--sigma {
+  position: relative;
+  height: 520px;
+  padding: 0;
+}
+
+.sigma-container {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
+.sigma-container canvas {
+  background: transparent !important;
+}
+
 .graph-canvas-empty {
   display: flex;
   flex-direction: column;
