@@ -2,6 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
+      "Bash(mkdir -p \"C:\\\\Users\\\\TUDOR\\\\Desktop\\\\polihack\\\\lex-ai-frontend\\\\src\\\\lib\\\\graph\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\TUDOR\\\\Desktop\\\\polihack\\\\lex-ai-frontend\\\\src\\\\components\\\\explore\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\TUDOR\\\\Desktop\\\\polihack\\\\lex-ai-frontend\\\\src\\\\types\")",
+      "Bash(npx tsc *)",
       "Bash(npm run *)"
     ]
   }

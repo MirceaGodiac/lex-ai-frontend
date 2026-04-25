@@ -1,41 +1,80 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Graph from 'graphology'
 import Sigma from 'sigma'
+import type { GraphNode, GraphEdge } from '../types/graph'
+import { buildGraphologyGraph } from '../lib/graph/graphology-builders'
 
-const DOMAIN_COLORS: Record<string, string> = {
-  Case: '#ef459d',
-  Statute: '#7c5cbc',
-  Party: '#c07a2e',
-  Court: '#2e7ab5',
+const NODE_TYPES = ['root', 'domain', 'legal_act', 'case', 'party', 'court'] as const
+type NodeTypeStr = (typeof NODE_TYPES)[number]
+
+const NODE_TYPE_LABELS: Record<NodeTypeStr, string> = {
+  root: 'Root',
+  domain: 'Domain',
+  legal_act: 'Legal Act',
+  case: 'Case',
+  party: 'Party',
+  court: 'Court',
 }
 
-const DOMAINS = ['Case', 'Statute', 'Party', 'Court']
+const NODE_TYPE_COLORS: Record<NodeTypeStr, string> = {
+  root: '#ffffff',
+  domain: '#3b82f6',
+  legal_act: '#94a3b8',
+  case: '#ef459d',
+  party: '#c07a2e',
+  court: '#2e7ab5',
+}
 
-const MOCK_NODES = [
-  { id: 'case-1', label: 'Smith v. Jones', domain: 'Case', x: 0.5, y: 0.5 },
-  { id: 'case-2', label: 'Brown v. State', domain: 'Case', x: 0.25, y: 0.65 },
-  { id: 'case-3', label: 'Davis Corp v. Miller', domain: 'Case', x: 0.72, y: 0.3 },
-  { id: 'statute-1', label: 'Civil Code §142', domain: 'Statute', x: 0.18, y: 0.38 },
-  { id: 'statute-2', label: 'Penal Code §48', domain: 'Statute', x: 0.82, y: 0.62 },
-  { id: 'party-1', label: 'John Smith', domain: 'Party', x: 0.42, y: 0.18 },
-  { id: 'party-2', label: 'Alice Brown', domain: 'Party', x: 0.6, y: 0.82 },
-  { id: 'court-1', label: 'Supreme Court', domain: 'Court', x: 0.12, y: 0.88 },
-  { id: 'court-2', label: 'Court of Appeals', domain: 'Court', x: 0.88, y: 0.12 },
+const mockNodes: GraphNode[] = [
+  { id: 'root-1', label: 'Romanian Law', type: 'root' },
+  { id: 'domain-civil', label: 'Civil Law', type: 'domain', domain: 'civil' },
+  { id: 'domain-penal', label: 'Criminal Law', type: 'domain', domain: 'penal' },
+  { id: 'domain-comercial', label: 'Commercial Law', type: 'domain', domain: 'comercial' },
+  { id: 'domain-admin', label: 'Administrative Law', type: 'domain', domain: 'administrativ' },
+  { id: 'act-cc', label: 'Civil Code', type: 'legal_act' },
+  { id: 'act-cp', label: 'Penal Code', type: 'legal_act' },
+  { id: 'act-cpc', label: 'Code of Civil Procedure', type: 'legal_act' },
+  { id: 'act-cpp', label: 'Code of Criminal Procedure', type: 'legal_act' },
+  { id: 'act-legea31', label: 'Law no. 31/1990', type: 'legal_act' },
+  { id: 'case-1', label: 'Dec. 123/2023 ICCJ', type: 'case' },
+  { id: 'case-2', label: 'Dec. 456/2022 CA Buc', type: 'case' },
+  { id: 'case-3', label: 'Dec. 789/2021 ICCJ', type: 'case' },
+  { id: 'party-1', label: 'Ministerul Justiției', type: 'party' },
+  { id: 'party-2', label: 'SC Alpha SRL', type: 'party' },
+  { id: 'court-1', label: 'ICCJ', type: 'court' },
+  { id: 'court-2', label: 'Curtea de Apel București', type: 'court' },
 ]
 
-const MOCK_EDGES: [string, string][] = [
-  ['case-1', 'statute-1'],
-  ['case-1', 'party-1'],
-  ['case-1', 'court-1'],
-  ['case-2', 'statute-2'],
-  ['case-2', 'party-2'],
-  ['case-2', 'court-2'],
-  ['case-3', 'statute-1'],
-  ['case-3', 'party-1'],
-  ['case-3', 'court-1'],
-  ['statute-1', 'court-1'],
-  ['statute-2', 'court-2'],
+const mockEdges: GraphEdge[] = [
+  { id: 'e1', source: 'root-1', target: 'domain-civil' },
+  { id: 'e2', source: 'root-1', target: 'domain-penal' },
+  { id: 'e3', source: 'root-1', target: 'domain-comercial' },
+  { id: 'e4', source: 'root-1', target: 'domain-admin' },
+  { id: 'e5', source: 'domain-civil', target: 'act-cc' },
+  { id: 'e6', source: 'domain-civil', target: 'act-cpc' },
+  { id: 'e7', source: 'domain-penal', target: 'act-cp' },
+  { id: 'e8', source: 'domain-penal', target: 'act-cpp' },
+  { id: 'e9', source: 'domain-comercial', target: 'act-legea31' },
+  { id: 'e10', source: 'act-cc', target: 'case-1' },
+  { id: 'e11', source: 'act-cp', target: 'case-2' },
+  { id: 'e12', source: 'act-cpc', target: 'case-3' },
+  { id: 'e13', source: 'case-1', target: 'court-1' },
+  { id: 'e14', source: 'case-2', target: 'court-2' },
+  { id: 'e15', source: 'case-3', target: 'court-1' },
+  { id: 'e16', source: 'case-1', target: 'party-1' },
+  { id: 'e17', source: 'case-2', target: 'party-2' },
 ]
+
+const NODE_INDEX = new Map(mockNodes.map((n) => [n.id, n]))
+
+function getNeighborLabels(nodeId: string): string[] {
+  return mockEdges
+    .filter((e) => e.source === nodeId || e.target === nodeId)
+    .map((e) => {
+      const neighborId = e.source === nodeId ? e.target : e.source
+      return NODE_INDEX.get(neighborId)?.label ?? neighborId
+    })
+}
 
 // Shared reducer state read from refs so sigma closure always sees fresh values
 interface ReducerState {
@@ -49,53 +88,32 @@ function GraphPage() {
   const sigmaRef = useRef<Sigma | null>(null)
   const graphRef = useRef<Graph | null>(null)
   const reducerStateRef = useRef<ReducerState>({
-    activeFilters: new Set(DOMAINS),
+    activeFilters: new Set(NODE_TYPES),
     hoveredNode: null,
     selectedNode: null,
   })
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(DOMAINS))
-  const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(NODE_TYPES))
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
-  const [selectedAttrs, setSelectedAttrs] = useState<{
-    label: string
-    domain: string
-    degree: number
-  } | null>(null)
 
   // Init sigma once on mount
   useEffect(() => {
     if (!containerRef.current) return
 
-    const graph = new Graph()
+    const graph = buildGraphologyGraph(mockNodes, mockEdges)
     graphRef.current = graph
-
-    for (const { id, label, domain, x, y } of MOCK_NODES) {
-      graph.addNode(id, {
-        label,
-        domain,
-        x,
-        y,
-        size: 12,
-        color: DOMAIN_COLORS[domain],
-      })
-    }
-
-    for (const [source, target] of MOCK_EDGES) {
-      graph.addEdge(source, target, { color: 'rgba(255,255,255,0.18)', size: 1.5 })
-    }
 
     const sigma = new Sigma(graph, containerRef.current, {
       renderEdgeLabels: false,
-      defaultLabelColor: 'rgba(255,239,227,0.9)',
       defaultEdgeColor: 'rgba(255,255,255,0.18)',
-      // Reducers read from ref so they always see current state
       nodeReducer: (node, data) => {
         const { activeFilters: filters, hoveredNode: hovered, selectedNode: selected } =
           reducerStateRef.current
 
-        if (!filters.has(data.domain as string)) {
+        const nodeType = NODE_INDEX.get(node)?.type ?? ''
+        if (!filters.has(nodeType)) {
           return { ...data, hidden: true }
         }
 
@@ -104,8 +122,8 @@ function GraphPage() {
         if (hovered) {
           const isNeighbor = graph.neighbors(hovered).includes(node)
           if (node !== hovered && !isNeighbor) {
-            result.color = 'rgba(80,80,80,0.22)'
-            result.label = null
+            result.color = '#1e293b'
+            result.size = (data.size as number) * 0.6
             result.zIndex = 0
           } else {
             result.zIndex = 1
@@ -113,7 +131,8 @@ function GraphPage() {
         }
 
         if (selected === node) {
-          result.highlighted = true
+          result.color = '#f1f5f9'
+          result.size = (data.size as number) * 1.3
           result.zIndex = 1
         }
 
@@ -125,8 +144,9 @@ function GraphPage() {
           const src = graph.source(edge)
           const tgt = graph.target(edge)
           if (src !== hovered && tgt !== hovered) {
-            return { ...data, hidden: true }
+            return { ...data, color: '#0f172a', size: 0.4 }
           }
+          return { ...data, color: '#64748b', size: 2 }
         }
         return data
       },
@@ -134,12 +154,18 @@ function GraphPage() {
 
     sigmaRef.current = sigma
 
-    sigma.on('enterNode', ({ node }) => setHoveredNode(node))
-    sigma.on('leaveNode', () => setHoveredNode(null))
+    sigma.on('enterNode', ({ node }) => {
+      setHoveredNode(node)
+      containerRef.current!.style.cursor = 'pointer'
+    })
+    sigma.on('leaveNode', () => {
+      setHoveredNode(null)
+      containerRef.current!.style.cursor = 'default'
+    })
     sigma.on('clickNode', ({ node }) =>
-      setSelectedNode(prev => (prev === node ? null : node)),
+      setSelectedNodeId(prev => (prev === node ? null : node)),
     )
-    sigma.on('clickStage', () => setSelectedNode(null))
+    sigma.on('clickStage', () => setSelectedNodeId(null))
 
     return () => {
       sigma.kill()
@@ -150,23 +176,9 @@ function GraphPage() {
 
   // Sync reducer state ref and refresh sigma whenever interaction state changes
   useEffect(() => {
-    reducerStateRef.current = { activeFilters, hoveredNode, selectedNode }
+    reducerStateRef.current = { activeFilters, hoveredNode, selectedNode: selectedNodeId }
     sigmaRef.current?.refresh()
-  }, [activeFilters, hoveredNode, selectedNode])
-
-  // Update selected node details (reads graph ref inside effect, not render)
-  useEffect(() => {
-    if (!selectedNode || !graphRef.current) {
-      setSelectedAttrs(null)
-      return
-    }
-    const attrs = graphRef.current.getNodeAttributes(selectedNode)
-    setSelectedAttrs({
-      label: attrs.label as string,
-      domain: attrs.domain as string,
-      degree: graphRef.current.degree(selectedNode),
-    })
-  }, [selectedNode])
+  }, [activeFilters, hoveredNode, selectedNodeId])
 
   // Search: animate camera to first matching node
   const handleSearch = useCallback((query: string) => {
@@ -190,14 +202,17 @@ function GraphPage() {
     }
   }, [])
 
-  const toggleFilter = (domain: string) => {
+  const toggleFilter = (type: string) => {
     setActiveFilters(prev => {
       const next = new Set(prev)
-      if (next.has(domain)) next.delete(domain)
-      else next.add(domain)
+      if (next.has(type)) next.delete(type)
+      else next.add(type)
       return next
     })
   }
+
+  const selectedNode = selectedNodeId ? NODE_INDEX.get(selectedNodeId) : null
+  const neighbors = selectedNodeId ? getNeighborLabels(selectedNodeId) : []
 
   return (
     <section className="page">
@@ -257,7 +272,7 @@ function GraphPage() {
               sigmaRef.current
                 ?.getCamera()
                 .animate({ x: 0, y: 0, ratio: 1, angle: 0 }, { duration: 400 })
-              setSelectedNode(null)
+              setSelectedNodeId(null)
               setSearchQuery('')
             }}
           >
@@ -274,33 +289,46 @@ function GraphPage() {
         <aside className="graph-sidebar">
           <article className="info-card graph-sidebar-card">
             <h2>Node Detail</h2>
-            {selectedAttrs ? (
-              <>
-                <p className="graph-node-name">{selectedAttrs.label}</p>
-                <p
-                  className="graph-node-domain"
-                  style={{ color: DOMAIN_COLORS[selectedAttrs.domain] }}
-                >
-                  {selectedAttrs.domain}
-                </p>
-                <p className="graph-empty-hint" style={{ marginTop: 8 }}>
-                  Connections: {selectedAttrs.degree}
-                </p>
-              </>
+            {selectedNode ? (
+              <dl className="graph-node-detail">
+                <dt>Label</dt>
+                <dd>{selectedNode.label}</dd>
+                <dt>Type</dt>
+                <dd style={{ textTransform: 'capitalize' }}>{selectedNode.type.replace('_', ' ')}</dd>
+                {selectedNode.domain && (
+                  <>
+                    <dt>Domain</dt>
+                    <dd style={{ textTransform: 'capitalize' }}>{selectedNode.domain}</dd>
+                  </>
+                )}
+                {neighbors.length > 0 && (
+                  <>
+                    <dt>Connected to</dt>
+                    <dd>
+                      <ul className="graph-neighbor-list">
+                        {neighbors.map((label) => (
+                          <li key={label}>{label}</li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </>
+                )}
+              </dl>
             ) : (
-              <p className="graph-empty-hint">
-                Select a node to inspect its properties and connections.
-              </p>
+              <p className="graph-empty-hint">Select a node to inspect its properties and connections.</p>
             )}
           </article>
 
           <article className="info-card graph-sidebar-card">
             <h2>Legend</h2>
             <ul className="graph-legend">
-              {DOMAINS.map(domain => (
-                <li key={domain} className="graph-legend-item">
-                  <span className="graph-legend-dot" style={{ background: DOMAIN_COLORS[domain] }} />
-                  {domain}
+              {NODE_TYPES.map(type => (
+                <li key={type} className="graph-legend-item">
+                  <span
+                    className="graph-legend-dot"
+                    style={{ background: NODE_TYPE_COLORS[type] }}
+                  />
+                  {NODE_TYPE_LABELS[type]}
                 </li>
               ))}
             </ul>
@@ -309,19 +337,19 @@ function GraphPage() {
           <article className="info-card graph-sidebar-card">
             <h2>Filters</h2>
             <ul className="graph-filter-list">
-              {DOMAINS.map(domain => (
-                <li key={domain} className="graph-filter-item">
+              {NODE_TYPES.map(type => (
+                <li key={type} className="graph-filter-item">
                   <label className="graph-filter-label">
                     <input
                       type="checkbox"
-                      checked={activeFilters.has(domain)}
-                      onChange={() => toggleFilter(domain)}
+                      checked={activeFilters.has(type)}
+                      onChange={() => toggleFilter(type)}
                     />
                     <span
                       className="graph-legend-dot"
-                      style={{ background: DOMAIN_COLORS[domain] }}
+                      style={{ background: NODE_TYPE_COLORS[type] }}
                     />
-                    {domain}
+                    {NODE_TYPE_LABELS[type]}
                   </label>
                 </li>
               ))}
