@@ -1,4 +1,5 @@
 import Graph from 'graphology'
+import forceAtlas2 from 'graphology-layout-forceatlas2'
 import type { GraphNode, GraphEdge } from '../../types/graph'
 import { computeNodeSize, computeNodeColor } from './visual-scoring'
 
@@ -24,6 +25,17 @@ export function buildGraphologyGraph(nodes: GraphNode[], edges: GraphEdge[]): Gr
       })
     }
   }
+
+  forceAtlas2.assign(graph, {
+    iterations: 150,
+    settings: {
+      gravity: 1,
+      scalingRatio: 2,
+      barnesHutOptimize: false,
+      strongGravityMode: false,
+      linLogMode: false,
+    },
+  })
 
   return graph
 }
