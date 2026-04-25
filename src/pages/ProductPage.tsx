@@ -1,4 +1,15 @@
 import { useDeferredValue, useEffect, useRef, useState, type CSSProperties } from 'react'
+import {
+  BookmarkSimple,
+  ChatsCircle,
+  ClockCounterClockwise,
+  FileText,
+  GearSix,
+  Graph,
+  Stack,
+  UserCircle,
+} from '@phosphor-icons/react'
+import { Link, useSearchParams } from 'react-router-dom'
 import PromptComposer from '../components/PromptComposer'
 import ProductBackgroundCanvas from '../components/product/ProductBackgroundCanvas'
 import ProductKnowledgeGraph, {
@@ -6,6 +17,8 @@ import ProductKnowledgeGraph, {
   type ProductGraphNode,
   type ProductNodeCategory,
 } from '../components/product/ProductKnowledgeGraph'
+
+type ProductPanelKey = 'assistant' | 'graph' | 'documents' | 'saved' | 'history' | 'sources' | 'settings' | 'profile'
 
 const productFilters: Array<{ key: ProductNodeCategory; label: string }> = [
   { key: 'case', label: 'Cases' },
@@ -20,6 +33,67 @@ const productPromptIdeas = [
   'statutory context for employment termination',
   'recent cases discussing intolerable work conditions',
 ]
+
+const productProjects = [
+  {
+    id: 'employment-termination',
+    title: 'Employment termination memo',
+    summary: 'Constructive dismissal research for Ontario employment counsel.',
+    updatedAt: 'Updated 2h ago',
+  },
+  {
+    id: 'labour-code-review',
+    title: 'Labour code review',
+    summary: 'Federal statutory context and recent administrative decisions.',
+    updatedAt: 'Updated yesterday',
+  },
+  {
+    id: 'human-rights-brief',
+    title: 'Human rights brief',
+    summary: 'Accommodation, retaliation, and overlap with workplace discipline.',
+    updatedAt: 'Updated Apr 24',
+  },
+] as const
+
+const productPanelMeta: Record<Exclude<ProductPanelKey, 'graph'>, {
+  title: string
+  badge: string
+  icon: 'spark' | 'doc' | 'bookmark' | 'clock' | 'database' | 'settings' | 'profile'
+}> = {
+  assistant: { title: 'Assistant', badge: 'Ready', icon: 'spark' },
+  documents: { title: 'Projects', badge: 'Workspace', icon: 'doc' },
+  saved: { title: 'Saved Items', badge: 'Pinned', icon: 'bookmark' },
+  history: { title: 'Project History', badge: 'Timeline', icon: 'clock' },
+  sources: { title: 'Project Sources', badge: 'Indexed', icon: 'database' },
+  settings: { title: 'Project Settings', badge: 'Controls', icon: 'settings' },
+  profile: { title: 'Profile', badge: 'Account', icon: 'profile' },
+}
+
+const productPanelMessages: Record<'saved' | 'history' | 'sources' | 'settings' | 'profile', {
+  title: string
+  description: (projectTitle: string) => string
+}> = {
+  saved: {
+    title: 'Saved research highlights',
+    description: (projectTitle) => `Pinned notes, authorities, and excerpts for ${projectTitle} stay here for quick return visits.`,
+  },
+  history: {
+    title: 'Recent project activity',
+    description: (projectTitle) => `Track prompt runs, file changes, and research checkpoints for ${projectTitle} in one timeline.`,
+  },
+  sources: {
+    title: 'Source coverage',
+    description: (projectTitle) => `Browse the statutes, cases, and secondary materials currently connected to ${projectTitle}.`,
+  },
+  settings: {
+    title: 'Workspace controls',
+    description: (projectTitle) => `Adjust naming, sharing, and default behavior for ${projectTitle} without leaving the canvas.`,
+  },
+  profile: {
+    title: 'Profile and account',
+    description: (projectTitle) => `Review account details, workspace access, and personal defaults while staying inside ${projectTitle}.`,
+  },
+}
 
 const productNodes: ProductGraphNode[] = [
   { id: 'constructive-dismissal', label: ['Constructive', 'Dismissal'], category: 'concept', icon: 'concept', emphasis: 'core', x: 54, y: 49 },
@@ -64,7 +138,18 @@ const productEdges: ProductGraphEdge[] = [
   { id: 'e18', source: 'scholarly-analysis', target: 'hr-reporter', label: 'cites', tone: 'secondary' },
 ]
 
-function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'share' | 'search' | 'chevron' | 'spark' | 'message' | 'doc' | 'bookmark' | 'clock' | 'database' | 'settings' | 'plus' | 'send' }) {
+const productRailItems = [
+  { key: 'assistant', label: 'Assistant', icon: ChatsCircle },
+  { key: 'graph', label: 'Knowledge graph', icon: Graph },
+  { key: 'documents', label: 'Documents', icon: FileText },
+  { key: 'saved', label: 'Saved items', icon: BookmarkSimple },
+  { key: 'history', label: 'History', icon: ClockCounterClockwise },
+  { key: 'sources', label: 'Sources', icon: Stack },
+  { key: 'settings', label: 'Settings', icon: GearSix },
+  { key: 'profile', label: 'Profile', icon: UserCircle },
+] as const
+
+function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'share' | 'search' | 'chevron' | 'spark' | 'message' | 'doc' | 'bookmark' | 'clock' | 'database' | 'settings' | 'profile' | 'plus' | 'send' }) {
   const strokeProps = {
     fill: 'none',
     stroke: 'currentColor',
@@ -152,6 +237,12 @@ function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'sha
           <path d="m10.5 3.7 1.5-.7 1.5.7.8 1.8 2 .7 1.6-.8 1 1-1 1.6.7 2 1.9.8v1.8l-1.9.8-.7 2 1 1.6-1 1-1.6-.8-2 .7-.8 1.8-1.5.7-1.5-.7-.8-1.8-2-.7-1.6.8-1-1 1-1.6-.7-2L3 12.7v-1.8l1.9-.8.7-2-1-1.6 1-1 1.6.8 2-.7.8-1.8ZM12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" {...strokeProps} />
         </svg>
       )
+    case 'profile':
+      return (
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0" {...strokeProps} />
+        </svg>
+      )
     case 'plus':
       return (
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -170,17 +261,17 @@ function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'sha
 function ProductPage() {
   const showGraph = false
   const assistantMinWidth = 320
-  const assistantMaxWidth = 720
   const assistantMobileBreakpoint = 760
   const assistantDefaultWidth = 420
   const assistantRef = useRef<HTMLElement | null>(null)
   const assistantResizeStartRef = useRef<{ x: number; width: number } | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [promptValue, setPromptValue] = useState('')
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [assistantWidth, setAssistantWidth] = useState(assistantDefaultWidth)
-  const [isAssistantCollapsed, setIsAssistantCollapsed] = useState(false)
+  const [isAssistantFullscreen, setIsAssistantFullscreen] = useState(false)
   const [isResizingAssistant, setIsResizingAssistant] = useState(false)
   const [activeFilters, setActiveFilters] = useState<Record<ProductNodeCategory, boolean>>({
     case: true,
@@ -188,6 +279,42 @@ function ProductPage() {
     concept: true,
     secondary: false,
   })
+  const requestedPanel = searchParams.get('panel') as ProductPanelKey | null
+  const workspaceSlug = searchParams.get('workspace')
+  const activePanel: ProductPanelKey = requestedPanel && (
+    requestedPanel === 'assistant'
+    || requestedPanel === 'graph'
+    || requestedPanel === 'documents'
+    || requestedPanel === 'saved'
+    || requestedPanel === 'history'
+    || requestedPanel === 'sources'
+    || requestedPanel === 'settings'
+    || requestedPanel === 'profile'
+  )
+    ? requestedPanel
+    : workspaceSlug
+      ? 'documents'
+      : 'assistant'
+  const isAssistantCollapsed = activePanel === 'graph'
+  const selectedProject = workspaceSlug === 'new-project'
+    ? {
+      id: 'new-project',
+      title: 'New project draft',
+      summary: 'Fresh workspace ready for a matter outline, uploaded files, or a first legal prompt.',
+      updatedAt: 'Not saved yet',
+    }
+    : productProjects.find((project) => project.id === workspaceSlug) ?? null
+  const projectTitle = selectedProject?.title ?? 'the current workspace'
+  const activePanelMeta = activePanel === 'graph' ? null : productPanelMeta[activePanel]
+  const showAssistantPanel = activePanel === 'assistant'
+  const showProjectsPanel = activePanel === 'documents'
+  const infoPanel = activePanel === 'saved'
+    || activePanel === 'history'
+    || activePanel === 'sources'
+    || activePanel === 'settings'
+    || activePanel === 'profile'
+    ? activePanel
+    : null
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
   const normalizedSearch = deferredSearchQuery.trim().toLowerCase()
@@ -210,17 +337,24 @@ function ProductPage() {
   }, [selectedNodeId, visibleNodeIds])
 
   useEffect(() => {
-    function getMaxAllowedWidth() {
-      return Math.max(assistantMinWidth, Math.min(assistantMaxWidth, window.innerWidth - 180))
+    function getSplitAssistantWidthLimit() {
+      return Math.max(assistantMinWidth, Math.floor(window.innerWidth * 0.5))
     }
 
     function syncAssistantWidth() {
       if (window.innerWidth <= assistantMobileBreakpoint) {
-        setIsAssistantCollapsed(false)
+        setIsAssistantFullscreen(false)
         return
       }
 
-      setAssistantWidth((current) => Math.min(current, getMaxAllowedWidth()))
+      const splitLimit = getSplitAssistantWidthLimit()
+
+      if (isAssistantFullscreen) {
+        setAssistantWidth(splitLimit)
+        return
+      }
+
+      setAssistantWidth((current) => Math.min(current, splitLimit))
     }
 
     syncAssistantWidth()
@@ -229,15 +363,15 @@ function ProductPage() {
     return () => {
       window.removeEventListener('resize', syncAssistantWidth)
     }
-  }, [])
+  }, [assistantMobileBreakpoint, assistantMinWidth, isAssistantFullscreen])
 
   useEffect(() => {
     if (!isResizingAssistant) {
       return
     }
 
-    function getMaxAllowedWidth() {
-      return Math.max(assistantMinWidth, Math.min(assistantMaxWidth, window.innerWidth - 180))
+    function getSplitAssistantWidthLimit() {
+      return Math.max(assistantMinWidth, Math.floor(window.innerWidth * 0.5))
     }
 
     function handlePointerMove(event: MouseEvent) {
@@ -247,7 +381,16 @@ function ProductPage() {
 
       const deltaX = event.clientX - assistantResizeStartRef.current.x
       const nextWidth = assistantResizeStartRef.current.width + deltaX
-      const clampedWidth = Math.min(getMaxAllowedWidth(), Math.max(assistantMinWidth, nextWidth))
+      const splitLimit = getSplitAssistantWidthLimit()
+      const clampedWidth = Math.max(assistantMinWidth, nextWidth)
+
+      if (clampedWidth >= splitLimit) {
+        setIsAssistantFullscreen(true)
+        setAssistantWidth(splitLimit)
+        return
+      }
+
+      setIsAssistantFullscreen(false)
       setAssistantWidth(clampedWidth)
     }
 
@@ -267,7 +410,7 @@ function ProductPage() {
       window.removeEventListener('mousemove', handlePointerMove)
       window.removeEventListener('mouseup', handlePointerUp)
     }
-  }, [isResizingAssistant])
+  }, [assistantMinWidth, assistantMobileBreakpoint, isResizingAssistant])
 
   function toggleFilter(category: ProductNodeCategory) {
     setActiveFilters((current) => ({
@@ -298,52 +441,71 @@ function ProductPage() {
 
   const selectedNode = selectedNodeId ? visibleNodeIndex.get(selectedNodeId) : null
   const zoomPercent = Math.round(zoom * 100)
+  const canvasBoxTitle = selectedProject
+    ? `${selectedProject.title} · 1000 × 1000`
+    : 'Movable 1000 × 1000 box'
+  const canvasBoxEyebrow = selectedProject ? 'Project Canvas' : 'Canvas Block'
+  const canvasBoxDescription = selectedProject
+    ? selectedProject.summary
+    : 'This box lives inside the product canvas world and can be dragged independently of the canvas pan and zoom.'
   const workspaceStyle = {
     '--product-assistant-width': isAssistantCollapsed ? '0px' : `${assistantWidth}px`,
   } as CSSProperties
   const workspaceClassName = [
     'product-workspace',
     showGraph ? '' : 'product-workspace--graph-hidden',
+    !isAssistantCollapsed && isAssistantFullscreen ? 'product-workspace--assistant-fullscreen' : '',
     isAssistantCollapsed ? 'product-workspace--assistant-collapsed' : '',
   ].filter(Boolean).join(' ')
 
+  function updateProductLink(nextValues: Record<string, string | null>) {
+    const nextSearchParams = new URLSearchParams(searchParams)
+
+    Object.entries(nextValues).forEach(([key, value]) => {
+      if (value === null) {
+        nextSearchParams.delete(key)
+        return
+      }
+
+      nextSearchParams.set(key, value)
+    })
+
+    setSearchParams(nextSearchParams)
+  }
+
   return (
     <section className="page page-product-studio">
-      <ProductBackgroundCanvas />
+      <ProductBackgroundCanvas
+        boxEyebrow={canvasBoxEyebrow}
+        boxTitle={canvasBoxTitle}
+        boxDescription={canvasBoxDescription}
+      />
 
       <div className={workspaceClassName} style={workspaceStyle}>
         <nav className="product-rail" aria-label="Workspace sections">
-          <button
-            type="button"
-            className={`product-rail-button${!isAssistantCollapsed ? ' product-rail-button--active' : ''}`}
-            aria-pressed={!isAssistantCollapsed}
-            onClick={() => {
-              setIsAssistantCollapsed((current) => !current)
-            }}
-          >
-            <ProductToolbarIcon kind="message" />
-          </button>
-          <button
-            type="button"
-            className={`product-rail-button${isAssistantCollapsed ? ' product-rail-button--active' : ''}`}
-          >
-            <ProductToolbarIcon kind="graph" />
-          </button>
-          <button type="button" className="product-rail-button">
-            <ProductToolbarIcon kind="doc" />
-          </button>
-          <button type="button" className="product-rail-button">
-            <ProductToolbarIcon kind="bookmark" />
-          </button>
-          <button type="button" className="product-rail-button">
-            <ProductToolbarIcon kind="clock" />
-          </button>
-          <button type="button" className="product-rail-button">
-            <ProductToolbarIcon kind="database" />
-          </button>
-          <button type="button" className="product-rail-button product-rail-button--bottom">
-            <ProductToolbarIcon kind="settings" />
-          </button>
+          {productRailItems.map(({ key, label, icon: Icon }) => {
+            const panelKey = key as ProductPanelKey
+            const isActive = activePanel === panelKey
+
+            function handleClick() {
+              updateProductLink({ panel: panelKey })
+            }
+
+            return (
+              <button
+                key={key}
+                type="button"
+                className={`product-rail-button${isActive ? ' product-rail-button--active' : ''}${key === 'settings' ? ' product-rail-button--bottom' : ''}`}
+                aria-label={label}
+                aria-pressed={isActive}
+                onClick={handleClick}
+              >
+                <span className="product-rail-button-icon" aria-hidden="true">
+                  <Icon weight="fill" />
+                </span>
+              </button>
+            )
+          })}
         </nav>
 
         <aside
@@ -361,7 +523,6 @@ function ProductPage() {
                   x: event.clientX,
                   width: assistantRef.current.getBoundingClientRect().width,
                 }
-                setIsAssistantCollapsed(false)
                 setIsResizingAssistant(true)
               }
             }}
@@ -370,39 +531,85 @@ function ProductPage() {
           <div className="product-assistant-card">
             <div className="product-assistant-header">
               <div className="product-assistant-title">
-                <ProductToolbarIcon kind="spark" />
-                <strong>Lexi AI Assistant</strong>
+                <ProductToolbarIcon kind={activePanelMeta?.icon ?? 'doc'} />
+                <strong>{activePanelMeta?.title ?? 'Workspace'}</strong>
               </div>
 
               <span className="product-ready-badge">
                 <span />
-                Ready
+                {activePanelMeta?.badge ?? 'Workspace'}
               </span>
             </div>
 
             <div className="product-assistant-scroll">
-              <div className="product-chat-empty-state" aria-live="polite">
-                <div className="product-chat-empty-icon">
-                  <ProductToolbarIcon kind="spark" />
+              {showAssistantPanel ? (
+                <div className="product-chat-empty-state" aria-live="polite">
+                  <div className="product-chat-empty-icon">
+                    <ProductToolbarIcon kind="spark" />
+                  </div>
+                  <strong>Start a new conversation</strong>
+                  <p>
+                    Ask Lexi AI to explore the graph, compare authorities, or pull
+                    statutory context from {projectTitle}.
+                  </p>
                 </div>
-                <strong>Start a new conversation</strong>
-                <p>
-                  Ask Lexi AI to explore the graph, compare authorities, or pull
-                  statutory context from the current workspace.
-                </p>
-              </div>
+              ) : showProjectsPanel ? (
+                <div className="product-projects-panel" aria-live="polite">
+                  <Link
+                    to="/product?panel=documents&workspace=new-project"
+                    className={`product-projects-create${workspaceSlug === 'new-project' ? ' product-project-card--active' : ''}`}
+                  >
+                    <span className="product-projects-create-icon">
+                      <ProductToolbarIcon kind="plus" />
+                    </span>
+                    <span className="product-projects-create-copy">
+                      <strong>New project</strong>
+                      <span>Start a fresh legal workspace from a prompt, file, or matter.</span>
+                    </span>
+                  </Link>
+
+                  <div className="product-projects-list">
+                    {productProjects.map((project) => (
+                      <Link
+                        key={project.id}
+                        to={`/product?panel=documents&workspace=${project.id}`}
+                        className={`product-project-card${workspaceSlug === project.id ? ' product-project-card--active' : ''}`}
+                      >
+                        <span className="product-project-card-icon">
+                          <ProductToolbarIcon kind="doc" />
+                        </span>
+                        <span className="product-project-card-copy">
+                          <strong>{project.title}</strong>
+                          <span>{project.summary}</span>
+                          <small>{project.updatedAt}</small>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : infoPanel ? (
+                <div className="product-chat-empty-state product-chat-empty-state--compact" aria-live="polite">
+                  <div className="product-chat-empty-icon">
+                    <ProductToolbarIcon kind={productPanelMeta[infoPanel].icon} />
+                  </div>
+                  <strong>{productPanelMessages[infoPanel].title}</strong>
+                  <p>{productPanelMessages[infoPanel].description(projectTitle)}</p>
+                </div>
+              ) : null}
             </div>
 
-            <div className="product-composer">
-              <PromptComposer
-                className="product-prompt-card"
-                promptPrefix="Ask Lexi AI about "
-                promptIdeas={productPromptIdeas}
-                value={promptValue}
-                onChange={setPromptValue}
-                ariaLabel="Ask a legal question or request"
-              />
-            </div>
+            {showAssistantPanel ? (
+              <div className="product-composer">
+                <PromptComposer
+                  promptPrefix={`Ask Lexi AI about ${selectedProject ? `${selectedProject.title.toLowerCase()} ` : ''}`}
+                  promptIdeas={productPromptIdeas}
+                  value={promptValue}
+                  onChange={setPromptValue}
+                  ariaLabel="Ask a legal question or request"
+                  animateIdeas={false}
+                />
+              </div>
+            ) : null}
           </div>
         </aside>
 

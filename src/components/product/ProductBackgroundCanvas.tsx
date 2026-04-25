@@ -52,6 +52,12 @@ type WebkitGestureEvent = Event & {
   scale?: number
 }
 
+interface ProductBackgroundCanvasProps {
+  boxEyebrow?: string
+  boxTitle?: string
+  boxDescription?: string
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
 }
@@ -73,7 +79,11 @@ function isLikelyTrackpad(event: WheelLikeEvent) {
   return Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) < 24
 }
 
-export default function ProductBackgroundCanvas() {
+export default function ProductBackgroundCanvas({
+  boxEyebrow = 'Canvas Block',
+  boxTitle = 'Movable 1000 × 1000 box',
+  boxDescription = 'This box lives inside the product canvas world and can be dragged independently of the canvas pan and zoom.',
+}: ProductBackgroundCanvasProps) {
   const surfaceRef = useRef<HTMLDivElement | null>(null)
   const boxDragRef = useRef<{ startPointer: CanvasPoint; startPosition: CanvasPoint } | null>(null)
   const viewportRef = useRef<ViewportState>({
@@ -514,12 +524,9 @@ export default function ProductBackgroundCanvas() {
             onPointerUp={handleBoxPointerUp}
             onPointerCancel={handleBoxPointerUp}
           >
-            <span className="product-background-canvas__box-eyebrow">Canvas Block</span>
-            <strong>Movable 1000 × 1000 box</strong>
-            <p>
-              This box lives inside the product canvas world and can be dragged
-              independently of the canvas pan and zoom.
-            </p>
+            <span className="product-background-canvas__box-eyebrow">{boxEyebrow}</span>
+            <strong>{boxTitle}</strong>
+            <p>{boxDescription}</p>
           </div>
         </motion.div>
       </div>
