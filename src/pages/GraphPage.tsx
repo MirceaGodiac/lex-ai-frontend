@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react'
 import SigmaGraphRenderer from '../components/explore/SigmaGraphRenderer'
 import type { GraphNode, GraphEdge } from '../types/graph'
 
@@ -48,7 +49,31 @@ const mockEdges: GraphEdge[] = [
   { id: 'e17', source: 'case-2', target: 'party-2' },
 ]
 
+const NODE_INDEX = new Map(mockNodes.map((n) => [n.id, n]))
+
+function getNeighborLabels(nodeId: string): string[] {
+  return mockEdges
+    .filter((e) => e.source === nodeId || e.target === nodeId)
+    .map((e) => {
+      const neighborId = e.source === nodeId ? e.target : e.source
+      return NODE_INDEX.get(neighborId)?.label ?? neighborId
+    })
+}
+
 function GraphPage() {
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setSelectedNodeId((prev) => (prev === nodeId ? null : nodeId))
+  }, [])
+
+  const handleStageClick = useCallback(() => {
+    setSelectedNodeId(null)
+  }, [])
+
+  const selectedNode = selectedNodeId ? NODE_INDEX.get(selectedNodeId) : null
+  const neighbors = selectedNodeId ? getNeighborLabels(selectedNodeId) : []
+
   return (
     <section className="page">
       <div className="section-header">
@@ -76,13 +101,45 @@ function GraphPage() {
 
       <div className="graph-workspace">
         <div className="graph-canvas info-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <SigmaGraphRenderer nodes={mockNodes} edges={mockEdges} />
+          <SigmaGraphRenderer
+            nodes={mockNodes}
+            edges={mockEdges}
+            onNodeClick={handleNodeClick}
+            onStageClick={handleStageClick}
+          />
         </div>
 
         <aside className="graph-sidebar">
           <article className="info-card graph-sidebar-card">
             <h2>Node Detail</h2>
-            <p className="graph-empty-hint">Select a node to inspect its properties and connections.</p>
+            {selectedNode ? (
+              <dl className="graph-node-detail">
+                <dt>Label</dt>
+                <dd>{selectedNode.label}</dd>
+                <dt>Type</dt>
+                <dd style={{ textTransform: 'capitalize' }}>{selectedNode.type.replace('_', ' ')}</dd>
+                {selectedNode.domain && (
+                  <>
+                    <dt>Domain</dt>
+                    <dd style={{ textTransform: 'capitalize' }}>{selectedNode.domain}</dd>
+                  </>
+                )}
+                {neighbors.length > 0 && (
+                  <>
+                    <dt>Connected to</dt>
+                    <dd>
+                      <ul className="graph-neighbor-list">
+                        {neighbors.map((label) => (
+                          <li key={label}>{label}</li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </>
+                )}
+              </dl>
+            ) : (
+              <p className="graph-empty-hint">Select a node to inspect its properties and connections.</p>
+            )}
           </article>
 
           <article className="info-card graph-sidebar-card">
