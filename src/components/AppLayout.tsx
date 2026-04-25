@@ -4,6 +4,7 @@ const navItems = [
   { label: 'Overview', to: '/' },
   { label: 'Assistant', to: '/assistant' },
   { label: 'Library', to: '/library' },
+  { label: 'Graph', to: '/graph' },
 ]
 
 function AppLayout() {
