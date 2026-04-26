@@ -257,7 +257,7 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
       const nodes = data.nodes as GraphNode[]
       if (nodes.length === 0) return
 
-      // 1. Pick 8 random seed nodes
+      // 1. Pick 8 random seeds
       const seeds: GraphNode[] = []
       const positioned = nodes.filter(n => typeof n.x === 'number' && typeof n.y === 'number')
       const pool = [...positioned]
@@ -266,23 +266,47 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
         seeds.push(pool.splice(idx, 1)[0])
       }
 
-      // 2. Discover relatives (parents/children) and edges
+      // 2. Build targeted discovery set (2 up, 2 down)
       const discoveredNodeIds = new Set<string>()
       const discoveredLinkIds = new Set<string>()
 
+      const adj = new Map<string, Array<{ to: string, linkIndex: number }>>()
+      const invAdj = new Map<string, Array<{ from: string, linkIndex: number }>>()
+      
+      data.links.forEach((link, index) => {
+        const s = typeof link.source === 'object' ? (link.source as any).id : link.source
+        const t = typeof link.target === 'object' ? (link.target as any).id : link.target
+        if (!adj.has(s)) adj.set(s, [])
+        if (!invAdj.has(t)) invAdj.set(t, [])
+        adj.get(s)!.push({ to: t, linkIndex: index })
+        invAdj.get(t)!.push({ from: s, linkIndex: index })
+      })
+
       seeds.forEach(seed => {
         discoveredNodeIds.add(seed.id)
-        
-        // Find links where this seed is source or target
-        data.links.forEach((link, index) => {
-          const sourceId = typeof link.source === 'object' ? (link.source as any).id : link.source
-          const targetId = typeof link.target === 'object' ? (link.target as any).id : link.target
-          
-          if (sourceId === seed.id || targetId === seed.id) {
-            discoveredNodeIds.add(sourceId)
-            discoveredNodeIds.add(targetId)
-            discoveredLinkIds.add(`${sourceId}-${targetId}-${index}`)
-          }
+
+        // Traversal Down (2 levels)
+        let level1Down = adj.get(seed.id) || []
+        level1Down.forEach(l1 => {
+          discoveredNodeIds.add(l1.to)
+          discoveredLinkIds.add(`${seed.id}-${l1.to}-${l1.linkIndex}`)
+          let level2Down = adj.get(l1.to) || []
+          level2Down.forEach(l2 => {
+            discoveredNodeIds.add(l2.to)
+            discoveredLinkIds.add(`${l1.to}-${l2.to}-${l2.linkIndex}`)
+          })
+        })
+
+        // Traversal Up (2 levels)
+        let level1Up = invAdj.get(seed.id) || []
+        level1Up.forEach(l1 => {
+          discoveredNodeIds.add(l1.from)
+          discoveredLinkIds.add(`${l1.from}-${seed.id}-${l1.linkIndex}`)
+          let level2Up = invAdj.get(l1.from) || []
+          level2Up.forEach(l2 => {
+            discoveredNodeIds.add(l2.from)
+            discoveredLinkIds.add(`${l2.from}-${l1.from}-${l2.linkIndex}`)
+          })
         })
       })
 
@@ -291,9 +315,7 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
       // 3. Tour Sequence
       const highlights = { nodes: discoveredNodeIds, links: discoveredLinkIds }
       for (let i = 0; i < seeds.length; i++) {
-        // Fast move (1s) for subsequent nodes, normal for first
         await flyToNode(seeds[i], highlights, i === 0 ? 2500 : 1200)
-        // brief pause at each node
         await new Promise(r => setTimeout(resolve => r(null), 800))
       }
     }

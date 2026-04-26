@@ -709,37 +709,38 @@ function ProductPage() {
             </div>
 
             <div className="product-assistant-scroll">
-              {discoveredNodes.length > 0 ? (
-                <div className="product-discovery-list">
-                  {discoveredNodes.map((node) => (
-                    <article key={node.id} className="product-discovery-banner">
-                      <div className="product-discovery-banner__header">
-                        <span className="product-discovery-banner__badge">
-                          {node.category === 'root' ? '§' : 
-                           node.category === 'article' ? 'Ar' : 
-                           node.category === 'paragraph' ? 'Al' : 
-                           node.category === 'letter' ? 'Lt' : 'Pt'}
-                        </span>
-                        <strong className="product-discovery-banner__title">{node.label}</strong>
-                      </div>
-                      <p className="product-discovery-banner__path">{node.fullLabel}</p>
-                    </article>
-                  ))}
+              <div className="product-chat-empty-state" aria-live="polite">
+                <div className="product-chat-empty-icon ">
+                  <ProductToolbarIcon kind="spark" />
                 </div>
-              ) : (
-                <div className="product-chat-empty-state" aria-live="polite">
-                  <div className="product-chat-empty-icon ">
-                    <ProductToolbarIcon kind="spark" />
-                  </div>
-                  <strong>Începe o conversație nouă</strong>
-                  <p>· Pune intrebări despre orice concept legal</p>
-                  <p>· Cere rezumate sau explicații</p>
-                  <p>· Explorează conexiunile din graful de cunoștințe</p>
-                </div>
-              )}
+                <strong>Începe o conversație nouă</strong>
+                <p>· Pune intrebări despre orice concept legal</p>
+                <p>· Cere rezumate sau explicații</p>
+                <p>· Explorează conexiunile din graful de cunoștințe</p>
+              </div>
             </div>
 
             <div className="product-composer">
+              {discoveredNodes.length > 0 ? (
+                <div className="product-context-attachments">
+                  {discoveredNodes.map((node) => (
+                    <div key={node.id} className="product-context-pill">
+                      <span className="product-context-pill__icon">
+                        <ProductToolbarIcon kind="doc" />
+                      </span>
+                      <span className="product-context-pill__label">{node.label}</span>
+                      <button 
+                        type="button" 
+                        className="product-context-pill__remove"
+                        onClick={() => setDiscoveredNodes(prev => prev.filter(n => n.id !== node.id))}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              
               <PromptComposer
                 className="product-prompt-card"
                 promptPrefix=""
