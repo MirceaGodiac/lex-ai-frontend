@@ -252,6 +252,7 @@ function ProductEvidenceCard({ unit, index }: { unit: EvidenceUnit; index: numbe
   const location = getEvidenceLocation(unit);
   const retrievalScore = formatScore(unit.retrieval_score);
   const rerankScore = formatScore(unit.rerank_score);
+  const whySelected = unit.why_selected ?? [];
 
   return (
     <article className="product-evidence-card">
@@ -284,9 +285,9 @@ function ProductEvidenceCard({ unit, index }: { unit: EvidenceUnit; index: numbe
         <p className="product-muted-note">Această evidence unit nu include raw_text sau excerpt.</p>
       )}
 
-      {unit.why_selected ? (
+      {whySelected.length > 0 ? (
         <p className="product-muted-note">
-          <em>{unit.why_selected}</em>
+          <em>{whySelected.join(", ")}</em>
         </p>
       ) : null}
 

@@ -20,6 +20,20 @@ export const WarningListSchema = z.preprocess((value) => {
   return []
 }, z.array(z.union([z.string(), z.number(), z.boolean()]).transform((value) => String(value))))
 
+export const WhySelectedSchema = z.preprocess((value) => {
+  if (value == null) return value
+
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+  }
+
+  if (typeof value === 'string' && value.trim().length > 0) {
+    return [value]
+  }
+
+  return []
+}, z.array(z.string()).nullable().optional())
+
 export const QueryRequestSchema = z.object({
   question: z.string(),
   jurisdiction: z.string(),
@@ -85,7 +99,7 @@ export const EvidenceUnitSchema = z.object({
   retrieval_score: optionalNumberSchema,
   rerank_score: optionalNumberSchema,
   score_breakdown: nullableMetadataSchema,
-  why_selected: z.string().nullable().optional(),
+  why_selected: WhySelectedSchema,
 }).passthrough()
 
 export const VerifierPayloadSchema = z.object({

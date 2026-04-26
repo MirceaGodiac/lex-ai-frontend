@@ -245,6 +245,7 @@ function EvidenceCardItem({ unit }: { unit: EvidenceUnit }) {
   const retrieval = formatScore(unit.retrieval_score)
   const rerank = formatScore(unit.rerank_score)
   const url = unit.source_url ?? null
+  const whySelected = unit.why_selected ?? []
 
   return (
     <li className="assistant-evidence-card">
@@ -278,9 +279,9 @@ function EvidenceCardItem({ unit }: { unit: EvidenceUnit }) {
           Această unitate nu include raw_text în răspunsul backend.
         </p>
       )}
-      {unit.why_selected ? (
+      {whySelected.length > 0 ? (
         <p className="assistant-why-selected">
-          <em>{unit.why_selected}</em>
+          <em>{whySelected.join(', ')}</em>
         </p>
       ) : null}
       {url ? (

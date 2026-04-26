@@ -63,7 +63,7 @@ export interface EvidenceUnit {
   retrieval_score?: number | null
   rerank_score?: number | null
   score_breakdown?: Record<string, unknown> | null
-  why_selected?: string | null
+  why_selected?: string[] | null
 }
 
 export type VerifierStatus =
