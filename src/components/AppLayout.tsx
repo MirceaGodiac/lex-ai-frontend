@@ -2,15 +2,16 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import brandLogo from '../../LoDi-LoDi-Capital_letter_L_featu...-Apr_25_2026_17-01-r2j3avfe-removebg-preview.png.svg'
 
 const navItems = [
-  { label: 'Prompt', to: '/assistant' },
-  { label: 'Confidentialitate', to: '/library' },
-  { label: 'Termeni', to: '/' },
+  { label: 'Ask', to: '/ask' },
+  { label: 'Explore', to: '/explore' },
+  { label: 'Confidențialitate', to: '/library' },
 ]
 
 function AppLayout() {
   const location = useLocation()
   const isHomeRoute = location.pathname === '/'
   const isStudioRoute = location.pathname === '/graph'
+    || location.pathname === '/explore'
     || location.pathname === '/product'
     || location.pathname === '/canvas'
 
@@ -22,7 +23,7 @@ function AppLayout() {
             <span className="brand-mark">
               <img src={brandLogo} alt="" aria-hidden="true" />
             </span>
-            <strong className="brand-wordmark">LexAi</strong>
+            <strong className="brand-wordmark">LexAI</strong>
           </Link>
 
           <nav aria-label="Main navigation">
@@ -55,13 +56,13 @@ function AppLayout() {
       {!isStudioRoute ? (
         <footer className="site-footer">
           <p className="footer-copy">
-            LexGraph organizeaza informatia juridica pentru orientare rapida.
-            Decizia finala ramane la profesionistul care semneaza opinia sau
+            LexAI organizează informația juridică pentru orientare rapidă.
+            Decizia finală rămâne la profesionistul care semnează opinia sau
             procedura.
           </p>
 
           <div className="footer-links">
-            <Link to="/library">Confidentialitate</Link>
+            <Link to="/library">Confidențialitate</Link>
             <Link to="/">Termeni</Link>
             <a href="mailto:contact@lexgraph.ro">contact@lexgraph.ro</a>
           </div>
