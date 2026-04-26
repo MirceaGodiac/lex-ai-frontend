@@ -9,7 +9,8 @@ import {
   Stack,
   UserCircle,
 } from '@phosphor-icons/react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
+import brandLogo from '../../LoDi-LoDi-Capital_letter_L_featu...-Apr_25_2026_17-01-r2j3avfe-removebg-preview.png.svg'
 import PromptComposer from '../components/PromptComposer'
 import ProductBackgroundCanvas from '../components/product/ProductBackgroundCanvas'
 import ProductKnowledgeGraph, {
@@ -19,6 +20,19 @@ import ProductKnowledgeGraph, {
 } from '../components/product/ProductKnowledgeGraph'
 
 type ProductPanelKey = 'assistant' | 'graph' | 'documents' | 'saved' | 'history' | 'sources' | 'settings' | 'profile'
+
+type ProductMessage = {
+  id: string
+  role: 'assistant' | 'user'
+  author: string
+  meta: string
+  content: string
+}
+
+type ProductLocationState = {
+  initialPrompt?: string
+  source?: string
+}
 
 const productFilters: Array<{ key: ProductNodeCategory; label: string }> = [
   { key: 'case', label: 'Cases' },
@@ -149,6 +163,33 @@ const productRailItems = [
   { key: 'profile', label: 'Profile', icon: UserCircle },
 ] as const
 
+const productFollowUpPrompts = [
+  'Map the governing legal concepts behind this issue',
+  'Surface the strongest statutes and articles to review first',
+  'Turn this into a short research checklist',
+  'Draft a concise answer for the client',
+] as const
+
+function createProductMessage(role: ProductMessage['role'], content: string): ProductMessage {
+  return {
+    id: `${role}-${crypto.randomUUID()}`,
+    role,
+    author: role === 'assistant' ? 'Lexi AI' : 'You',
+    meta: role === 'assistant' ? 'Workspace note' : 'Just now',
+    content,
+  }
+}
+
+function buildPromptThread(prompt: string) {
+  return [
+    createProductMessage('user', prompt),
+    createProductMessage(
+      'assistant',
+      'Prompt added to the workspace. From here the assistant can trace governing articles, connect related cases, and turn the question into a tighter research path.',
+    ),
+  ]
+}
+
 function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'share' | 'search' | 'chevron' | 'spark' | 'message' | 'doc' | 'bookmark' | 'clock' | 'database' | 'settings' | 'profile' | 'plus' | 'send' }) {
   const strokeProps = {
     fill: 'none',
@@ -259,6 +300,7 @@ function ProductToolbarIcon({ kind }: { kind: 'graph' | 'list' | 'filter' | 'sha
 }
 
 function ProductPage() {
+  const location = useLocation()
   const showGraph = false
   const assistantMinWidth = 320
   const assistantMobileBreakpoint = 760
@@ -268,6 +310,19 @@ function ProductPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [searchQuery, setSearchQuery] = useState('')
   const [promptValue, setPromptValue] = useState('')
+  const locationState = location.state as ProductLocationState | null
+  const prefersReducedMotion = typeof window !== 'undefined'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const initialPrompt = typeof locationState?.initialPrompt === 'string'
+    ? locationState.initialPrompt.trim()
+    : ''
+  const shouldAnimateRouteHandoff = locationState?.source === 'home'
+    && initialPrompt.length > 0
+    && !prefersReducedMotion
+  const [messages, setMessages] = useState<ProductMessage[]>(
+    () => (initialPrompt.length > 0 ? buildPromptThread(initialPrompt) : []),
+  )
+  const [isRouteHandoffVisible, setIsRouteHandoffVisible] = useState(!shouldAnimateRouteHandoff)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [assistantWidth, setAssistantWidth] = useState(assistantDefaultWidth)
@@ -331,10 +386,16 @@ function ProductPage() {
       .map((node) => node.id)
 
   useEffect(() => {
-    if (selectedNodeId && !visibleNodeIds.has(selectedNodeId)) {
-      setSelectedNodeId(null)
+    if (!shouldAnimateRouteHandoff) {
+      return
     }
-  }, [selectedNodeId, visibleNodeIds])
+
+    const frameId = window.requestAnimationFrame(() => {
+      setIsRouteHandoffVisible(true)
+    })
+
+    return () => window.cancelAnimationFrame(frameId)
+  }, [shouldAnimateRouteHandoff])
 
   useEffect(() => {
     function getSplitAssistantWidthLimit() {
@@ -439,7 +500,24 @@ function ProductPage() {
     })
   }
 
-  const selectedNode = selectedNodeId ? visibleNodeIndex.get(selectedNodeId) : null
+  function submitPrompt(nextPrompt: string) {
+    const trimmedPrompt = nextPrompt.trim()
+
+    if (trimmedPrompt.length === 0) {
+      return
+    }
+
+    setMessages((currentMessages) => [
+      ...currentMessages,
+      ...buildPromptThread(trimmedPrompt),
+    ])
+    setPromptValue('')
+  }
+
+  const activeSelectedNodeId = selectedNodeId && visibleNodeIds.has(selectedNodeId)
+    ? selectedNodeId
+    : null
+  const selectedNode = activeSelectedNodeId ? visibleNodeIndex.get(activeSelectedNodeId) : null
   const zoomPercent = Math.round(zoom * 100)
   const canvasBoxTitle = selectedProject
     ? `${selectedProject.title} · 1000 × 1000`
@@ -474,7 +552,9 @@ function ProductPage() {
   }
 
   return (
-    <section className="page page-product-studio">
+    <section
+      className={`page page-product-studio${shouldAnimateRouteHandoff ? ' page-product-studio--handoff' : ''}${shouldAnimateRouteHandoff && isRouteHandoffVisible ? ' page-product-studio--handoff-visible' : ''}`}
+    >
       <ProductBackgroundCanvas
         boxEyebrow={canvasBoxEyebrow}
         boxTitle={canvasBoxTitle}
@@ -543,16 +623,69 @@ function ProductPage() {
 
             <div className="product-assistant-scroll">
               {showAssistantPanel ? (
-                <div className="product-chat-empty-state" aria-live="polite">
-                  <div className="product-chat-empty-icon">
-                    <ProductToolbarIcon kind="spark" />
+                messages.length > 0 ? (
+                  <>
+                    <div className="product-chat-thread" aria-live="polite">
+                      {messages.map((message) => (
+                        <article
+                          key={message.id}
+                          className={`product-message product-message--${message.role}`}
+                        >
+                          <div
+                            className={`product-message-avatar product-message-avatar--${message.role}`}
+                            aria-hidden="true"
+                          >
+                            {message.role === 'assistant' ? (
+                              <img className="product-message-logo" src={brandLogo} alt="" />
+                            ) : (
+                              'You'
+                            )}
+                          </div>
+
+                          <div
+                            className={`product-message-body product-message-body--${message.role}`}
+                          >
+                            <div className="product-message-meta">
+                              <strong>{message.author}</strong>
+                              <span>{message.meta}</span>
+                            </div>
+
+                            <p>{message.content}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+
+                    <div className="product-chat-actions">
+                      <div className="product-applied-filter-label">
+                        Next prompts
+                      </div>
+
+                      <div className="product-suggestion-grid">
+                        {productFollowUpPrompts.map((suggestion) => (
+                          <button
+                            key={suggestion}
+                            type="button"
+                            onClick={() => submitPrompt(suggestion)}
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="product-chat-empty-state" aria-live="polite">
+                    <div className="product-chat-empty-icon">
+                      <ProductToolbarIcon kind="spark" />
+                    </div>
+                    <strong>Start a new conversation</strong>
+                    <p>
+                      Ask Lexi AI to explore the graph, compare authorities, or pull
+                      statutory context from {projectTitle}.
+                    </p>
                   </div>
-                  <strong>Start a new conversation</strong>
-                  <p>
-                    Ask Lexi AI to explore the graph, compare authorities, or pull
-                    statutory context from {projectTitle}.
-                  </p>
-                </div>
+                )
               ) : showProjectsPanel ? (
                 <div className="product-projects-panel" aria-live="polite">
                   <Link
@@ -605,6 +738,7 @@ function ProductPage() {
                   promptIdeas={productPromptIdeas}
                   value={promptValue}
                   onChange={setPromptValue}
+                  onSubmit={submitPrompt}
                   ariaLabel="Ask a legal question or request"
                   animateIdeas={false}
                 />
@@ -621,7 +755,7 @@ function ProductPage() {
               <ProductKnowledgeGraph
                 nodes={visibleNodes}
                 edges={visibleEdges}
-                selectedNodeId={selectedNodeId}
+                selectedNodeId={activeSelectedNodeId}
                 highlightedNodeIds={matchingNodeIds}
                 zoom={zoom}
                 onNodeClick={(nodeId) => {
@@ -721,7 +855,7 @@ function ProductPage() {
                 <ProductKnowledgeGraph
                   nodes={visibleNodes}
                   edges={visibleEdges}
-                  selectedNodeId={selectedNodeId}
+                  selectedNodeId={activeSelectedNodeId}
                   highlightedNodeIds={matchingNodeIds}
                   mini
                 />

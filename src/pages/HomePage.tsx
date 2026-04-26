@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import PromptComposer from '../components/PromptComposer'
 
 const promptIdeas = [
@@ -10,7 +11,10 @@ const promptIdeas = [
 ]
 
 function HomePage() {
+  const navigate = useNavigate()
+  const navigationTimeoutRef = useRef<number | null>(null)
   const [isIntroVisible, setIsIntroVisible] = useState(false)
+  const [isRouteHandoffActive, setIsRouteHandoffActive] = useState(false)
   const [promptValue, setPromptValue] = useState('')
 
   useEffect(() => {
@@ -21,9 +25,44 @@ function HomePage() {
     return () => window.cancelAnimationFrame(frameId)
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current !== null) {
+        window.clearTimeout(navigationTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  function handlePromptSubmit(nextPrompt: string) {
+    const trimmedPrompt = nextPrompt.trim()
+
+    if (trimmedPrompt.length === 0 || isRouteHandoffActive) {
+      return
+    }
+
+    const navigateToProduct = () => {
+      navigate('/product?panel=assistant', {
+        state: {
+          initialPrompt: trimmedPrompt,
+          source: 'home',
+          submittedAt: Date.now(),
+        },
+      })
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      navigateToProduct()
+      return
+    }
+
+    setPromptValue(trimmedPrompt)
+    setIsRouteHandoffActive(true)
+    navigationTimeoutRef.current = window.setTimeout(navigateToProduct, 280)
+  }
+
   return (
     <section
-      className={`page page-home${isIntroVisible ? ' page-home--intro-visible' : ''}`}
+      className={`page page-home${isIntroVisible ? ' page-home--intro-visible' : ''}${isRouteHandoffActive ? ' page-home--handoff-active' : ''}`}
     >
       <div className="hero-stack">
         <div className="hero-copy">
@@ -42,6 +81,7 @@ function HomePage() {
           promptIdeas={promptIdeas}
           value={promptValue}
           onChange={setPromptValue}
+          onSubmit={handlePromptSubmit}
           ariaLabel="Prompt"
         />
       </div>

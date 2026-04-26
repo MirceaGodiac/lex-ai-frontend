@@ -458,7 +458,7 @@ export default function ProductBackgroundCanvas({
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
           overscrollBehavior: 'none',
-          backgroundColor: '#05070b',
+          backgroundColor: 'transparent',
         }}
       >
         <div className="product-background-canvas__zoom-readout">
@@ -471,12 +471,12 @@ export default function ProductBackgroundCanvas({
             y,
             scale,
             willChange: 'transform',
-            backgroundColor: '#05070b',
+            backgroundColor: 'transparent',
             backgroundImage: `
-              linear-gradient(rgba(112, 145, 201, 0.34) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(112, 145, 201, 0.34) 1px, transparent 1px),
-              linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px)
+              linear-gradient(rgba(101, 142, 255, 0.16) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(220, 141, 232, 0.14) 1px, transparent 1px),
+              linear-gradient(rgba(88, 127, 255, 0.055) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(239, 69, 157, 0.045) 1px, transparent 1px)
             `,
             backgroundSize: `${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
             backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
@@ -491,10 +491,10 @@ export default function ProductBackgroundCanvas({
             willChange: 'transform, opacity',
             opacity: hoverWorldPoint ? 1 : 0,
             backgroundImage: `
-              linear-gradient(rgba(152, 107, 255, 0.72) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(65, 104, 255, 0.72) 1px, transparent 1px),
-              linear-gradient(rgba(152, 107, 255, 0.28) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(65, 104, 255, 0.28) 1px, transparent 1px)
+              linear-gradient(rgba(101, 142, 255, 0.34) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(220, 141, 232, 0.3) 1px, transparent 1px),
+              linear-gradient(rgba(88, 127, 255, 0.12) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(239, 69, 157, 0.1) 1px, transparent 1px)
             `,
             backgroundSize: `${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
             backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
