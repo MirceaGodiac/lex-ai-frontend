@@ -606,15 +606,32 @@ function ProductPage() {
   const [productEdges, setProductEdges] = useState<ProductGraphEdge[]>([]);
 
   useEffect(() => {
+    if (!showGraph) {
+      return;
+    }
+
+    let isMounted = true;
+
     getProductGraph()
-      .then(data => {
+      .then((data) => {
+        if (!isMounted) {
+          return;
+        }
+
         setProductNodes(data.nodes as ProductGraphNode[]);
         setProductEdges(data.edges as ProductGraphEdge[]);
       })
       .catch(() => {
-        console.warn("Product graph API unavailable, using local fallback");
+        if (isMounted) {
+          setProductNodes([]);
+          setProductEdges([]);
+        }
       });
-  }, []);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showGraph]);
 
   const [isHighlightingPoints, setIsHighlightingPoints] = useState(false);
   const [discoveryProgress, setDiscoveryProgress] = useState(0);

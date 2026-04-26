@@ -181,3 +181,20 @@ export interface LibraryItem {
   description: string
   type: string
 }
+
+export interface ProductGraphPayload {
+  nodes: unknown[]
+  edges: unknown[]
+}
+
+export interface ExploreGraphNode {
+  id: string
+  label: string
+  domain: string
+  zoomLevel?: number | null
+}
+
+export interface ExploreGraphPayload {
+  nodes: ExploreGraphNode[]
+  edges: string[][]
+}

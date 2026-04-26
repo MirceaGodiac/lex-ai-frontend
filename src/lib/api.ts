@@ -1,5 +1,13 @@
 import { ZodError } from 'zod'
-import type { QueryGraphResponse, QueryRequest, QueryResponse, Suggestion, LibraryItem } from '../types/lexai'
+import type {
+  ExploreGraphPayload,
+  LibraryItem,
+  ProductGraphPayload,
+  QueryGraphResponse,
+  QueryRequest,
+  QueryResponse,
+  Suggestion,
+} from '../types/lexai'
 import { normalizeQueryGraphResponse, normalizeQueryResponse } from './lexaiNormalizers'
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
@@ -144,10 +152,10 @@ export function getLibrary(): Promise<LibraryItem[]> {
   return requestJson<LibraryItem[]>('/api/library')
 }
 
-export function getProductGraph(): Promise<{ nodes: unknown[]; edges: unknown[] }> {
-  return requestJson<{ nodes: unknown[]; edges: unknown[] }>('/api/product/graph')
+export function getProductGraph(): Promise<ProductGraphPayload> {
+  return requestJson<ProductGraphPayload>('/api/product/graph')
 }
 
-export function getExploreGraph(): Promise<{ nodes: unknown[]; edges: string[][] }> {
-  return requestJson<{ nodes: unknown[]; edges: string[][] }>('/api/graph/explore')
+export function getExploreGraph(): Promise<ExploreGraphPayload> {
+  return requestJson<ExploreGraphPayload>('/api/graph/explore')
 }
