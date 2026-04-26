@@ -124,6 +124,8 @@ const graphLinks: GraphLink[] = legalEdges
 export interface ProductForceGraphHandle {
   focusRandomNode: () => void
   discoverNodes: () => void
+  focusNode: (nodeId: string) => void
+  zoomToFit: () => void
 }
 
 interface ProductForceGraphProps {
@@ -253,11 +255,23 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
       const target = pool[Math.floor(Math.random() * pool.length)]
       flyToNode(target)
     },
+    focusNode(nodeId: string) {
+      const node = (data.nodes as GraphNode[]).find(n => n.id === nodeId)
+      if (node) flyToNode(node, undefined, 1500)
+    },
+    zoomToFit() {
+      const graph = graphRef.current
+      if (graph) {
+        graph.zoomToFit(1500, 150)
+        setHighlightedNodeIds(new Set())
+        setHighlightedLinkIds(new Set())
+      }
+    },
     async discoverNodes() {
       const nodes = data.nodes as GraphNode[]
       if (nodes.length === 0) return
 
-      // 1. Pick 8 random seed nodes
+      // 1. Pick 8 random seeds
       const seeds: GraphNode[] = []
       const positioned = nodes.filter(n => typeof n.x === 'number' && typeof n.y === 'number')
       const pool = [...positioned]
@@ -266,24 +280,55 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
         seeds.push(pool.splice(idx, 1)[0])
       }
 
-      // 2. Discover relatives (parents/children) and edges
+      // 2. Build targeted discovery set (Contextual traversal)
       const discoveredNodeIds = new Set<string>()
       const discoveredLinkIds = new Set<string>()
+
+      const adj = new Map<string, Array<{ to: string, linkIndex: number }>>()
+      const invAdj = new Map<string, Array<{ from: string, linkIndex: number }>>()
+      
+      data.links.forEach((link, index) => {
+        const s = typeof link.source === 'object' ? (link.source as any).id : link.source
+        const t = typeof link.target === 'object' ? (link.target as any).id : link.target
+        if (!adj.has(s)) adj.set(s, [])
+        if (!invAdj.has(t)) invAdj.set(t, [])
+        adj.get(s)!.push({ to: t, linkIndex: index })
+        invAdj.get(t)!.push({ from: s, linkIndex: index })
+      })
 
       seeds.forEach(seed => {
         discoveredNodeIds.add(seed.id)
         
-        // Find links where this seed is source or target
-        data.links.forEach((link, index) => {
-          const sourceId = typeof link.source === 'object' ? (link.source as any).id : link.source
-          const targetId = typeof link.target === 'object' ? (link.target as any).id : link.target
-          
-          if (sourceId === seed.id || targetId === seed.id) {
-            discoveredNodeIds.add(sourceId)
-            discoveredNodeIds.add(targetId)
-            discoveredLinkIds.add(`${sourceId}-${targetId}-${index}`)
+        // Find parent context
+        const parents = invAdj.get(seed.id) || []
+        let foundContext = false
+
+        for (const p of parents) {
+          const parentNode = nodes.find(n => n.id === p.from)
+          // If parent is not the central root, grab the whole family
+          if (parentNode && parentNode.category !== 'root') {
+            discoveredNodeIds.add(parentNode.id)
+            discoveredLinkIds.add(`${parentNode.id}-${seed.id}-${p.linkIndex}`)
+            
+            // Add all siblings (other sons of this parent)
+            const siblings = adj.get(parentNode.id) || []
+            siblings.forEach(sib => {
+              discoveredNodeIds.add(sib.to)
+              discoveredLinkIds.add(`${parentNode.id}-${sib.to}-${sib.linkIndex}`)
+            })
+            foundContext = true
+            break
           }
-        })
+        }
+
+        // If no parent context was found (or parent is root), just grab direct sons
+        if (!foundContext) {
+          const sons = adj.get(seed.id) || []
+          sons.forEach(son => {
+            discoveredNodeIds.add(son.to)
+            discoveredLinkIds.add(`${seed.id}-${son.to}-${son.linkIndex}`)
+          })
+        }
       })
 
       if (onNodesDiscovered) onNodesDiscovered(seeds)
@@ -291,10 +336,8 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
       // 3. Tour Sequence
       const highlights = { nodes: discoveredNodeIds, links: discoveredLinkIds }
       for (let i = 0; i < seeds.length; i++) {
-        // Fast move (1s) for subsequent nodes, normal for first
-        await flyToNode(seeds[i], highlights, i === 0 ? 2500 : 1200)
-        // brief pause at each node
-        await new Promise(r => setTimeout(resolve => r(null), 800))
+        await flyToNode(seeds[i], highlights, i === 0 ? 2200 : 1000)
+        await new Promise(r => setTimeout(resolve => r(null), 600))
       }
     }
   }), [flyToNode, data, onNodesDiscovered])

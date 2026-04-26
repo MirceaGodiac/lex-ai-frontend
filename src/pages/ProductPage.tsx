@@ -504,6 +504,8 @@ function ProductPage() {
   const [isResizingAssistant, setIsResizingAssistant] = useState(false);
   const [hideParagraphs, setHideParagraphs] = useState(false);
   const [discoveredNodes, setDiscoveredNodes] = useState<any[]>([]);
+  const [discoveryIndex, setDiscoveryIndex] = useState(-1);
+
   const [activeFilters, setActiveFilters] = useState<
     Record<ProductNodeCategory, boolean>
   >({
@@ -771,6 +773,20 @@ function ProductPage() {
               hideParagraphs={hideParagraphs} 
               onNodesDiscovered={handleNodesDiscovered}
             />
+            
+            {discoveredNodes.length > 0 ? (
+              <div className="product-graph-nav">
+                <button type="button" className="product-graph-nav__btn" aria-label="Previous">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <div className="product-graph-nav__display">
+                  <input type="text" className="product-graph-nav__input" value={`1 of ${discoveredNodes.length}`} readOnly />
+                </div>
+                <button type="button" className="product-graph-nav__btn" aria-label="Next">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
