@@ -7,6 +7,7 @@ import type {
   QueryResponse,
   VerifierPayload,
 } from '../types/lexai'
+import { getUsageStats } from '../lib/token-calculator'
 
 const DEMO_QUESTION =
   'Poate angajatorul să-mi scadă salariul fără act adițional?'
@@ -374,6 +375,7 @@ function AssistantPage() {
   const [response, setResponse] = useState<QueryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [usage, setUsage] = useState<any>(null)
 
   const trimmed = question.trim()
   const submitDisabled = trimmed.length === 0 || isLoading
@@ -398,6 +400,19 @@ function AssistantPage() {
     try {
       const result = await postQuery(request)
       setResponse(result)
+      
+      // Calculate and log usage JSON
+      const evidenceText = result.evidence_units?.map((u) => u.raw_text ?? '').join(' ') ?? ''
+      const usage = getUsageStats(
+        result.question ?? trimmed,
+        evidenceText,
+        result.answer.short_answer,
+        result.answer.detailed_answer
+      )
+      console.log('Query Usage Stats (JSON):', JSON.stringify(usage, null, 2))
+      
+      // Auto-save to a 'hidden' state for download
+      setUsage(usage)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -478,6 +493,27 @@ function AssistantPage() {
               <p className="assistant-refusal">
                 <em>Refuz: {response.answer.refusal_reason}</em>
               </p>
+            ) : null}
+
+            {usage ? (
+              <div style={{ marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  className="assistant-btn assistant-btn--secondary"
+                  style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem' }}
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(usage, null, 2)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `usage-${response.query_id}.json`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download Usage JSON
+                </button>
+              </div>
             ) : null}
 
             <dl className="assistant-meta">
