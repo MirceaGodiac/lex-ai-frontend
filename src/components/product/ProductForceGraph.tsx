@@ -274,6 +274,12 @@ interface ProductForceGraphProps {
   highlightedEdgeIds?: string[]
 }
 
+function isLikelyTrackpadPan(event: WheelEvent) {
+  if (event.ctrlKey || event.metaKey) return false
+
+  return Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) < 24
+}
+
 const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphProps>(function ProductForceGraph({
   hideParagraphs = false,
   onNodesDiscovered,
@@ -728,6 +734,36 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
     return () => clearTimeout(timer)
   }, [])
 
+  useEffect(() => {
+    const element = containerRef.current
+    const graph = graphRef.current
+
+    if (!element || !graph) return
+
+    function handleWheel(event: WheelEvent) {
+      if (!isLikelyTrackpadPan(event)) return
+
+      event.preventDefault()
+
+      const center = graph.centerAt()
+      const zoom = graph.zoom()
+
+      if (!center || !zoom) return
+
+      graph.centerAt(
+        center.x + event.deltaX / zoom,
+        center.y + event.deltaY / zoom,
+        0,
+      )
+    }
+
+    element.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      element.removeEventListener('wheel', handleWheel)
+    }
+  }, [size.width, size.height, data])
+
   return (
     <div
       ref={containerRef}
@@ -757,6 +793,9 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
           linkDirectionalArrowLength={3.5}
           linkDirectionalArrowRelPos={1}
           nodeRelSize={3}
+          enableZoomInteraction={(event) => {
+            return !(event instanceof WheelEvent && isLikelyTrackpadPan(event))
+          }}
           nodeVal={(node) => (node as GraphNode).val}
           nodeColor={(node) => categoryColor[(node as GraphNode).category]}
           nodeLabel={() => ''}
