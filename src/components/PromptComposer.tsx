@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 
 interface PromptComposerProps {
   promptPrefix: string
   promptIdeas: string[]
   value: string
   onChange: (value: string) => void
+  onSubmit?: (value: string) => void
   ariaLabel: string
   className?: string
   animateIdeas?: boolean
@@ -29,6 +30,7 @@ export default function PromptComposer({
   promptIdeas,
   value,
   onChange,
+  onSubmit,
   ariaLabel,
   className = '',
   animateIdeas = true,
@@ -36,12 +38,10 @@ export default function PromptComposer({
   const [ideaIndex, setIdeaIndex] = useState(0)
   const [typedIdea, setTypedIdea] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
+  const canSubmit = value.trim().length > 0
 
   useEffect(() => {
     if (!animateIdeas || promptIdeas.length === 0) {
-      setTypedIdea('')
-      setIsDeleting(false)
-      setIdeaIndex(0)
       return
     }
 
@@ -74,6 +74,23 @@ export default function PromptComposer({
     return () => window.clearTimeout(timeoutId)
   }, [animateIdeas, ideaIndex, isDeleting, promptIdeas, typedIdea])
 
+  function handleSubmit() {
+    if (!onSubmit || !canSubmit) {
+      return
+    }
+
+    onSubmit(value.trim())
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey || event.nativeEvent.isComposing) {
+      return
+    }
+
+    event.preventDefault()
+    handleSubmit()
+  }
+
   return (
     <section className={`prompt-card${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
       <div className="prompt-card__frame">
@@ -84,6 +101,7 @@ export default function PromptComposer({
               className="prompt-card__input"
               value={value}
               onChange={(event) => onChange(event.target.value)}
+              onKeyDown={handleKeyDown}
               rows={2}
               aria-label={ariaLabel}
             />
@@ -112,7 +130,8 @@ export default function PromptComposer({
             className="prompt-icon-button prompt-icon-button-primary"
             type="button"
             aria-label="Send prompt"
-            disabled={value.trim().length === 0}
+            disabled={!onSubmit || !canSubmit}
+            onClick={handleSubmit}
           >
             <ArrowUpIcon />
           </button>
