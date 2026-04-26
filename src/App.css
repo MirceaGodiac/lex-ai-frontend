@@ -9,15 +9,13 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
   color: var(--text-primary);
-  background: linear-gradient(
-    180deg,
-    #020202 0%,
-    #020202 74%,
-    #070504 82%,
-    #1a100c 90%,
-    #6b3a25 97%,
-    #c46f46 100%
-  );
+  background: linear-gradient(180deg,
+      #020202 0%,
+      #020202 74%,
+      #070504 82%,
+      #1a100c 90%,
+      #6b3a25 97%,
+      #c46f46 100%);
 }
 
 .app-shell--home .navbar {
@@ -44,34 +42,26 @@
 
 .app-shell::before {
   background:
-    radial-gradient(
-      circle at 16% 100%,
+    radial-gradient(circle at 16% 100%,
       rgba(211, 133, 74, 0.94) 0%,
       rgba(211, 133, 74, 0.72) 16%,
       rgba(211, 133, 74, 0.14) 34%,
-      transparent 48%
-    ),
-    radial-gradient(
-      circle at 84% 100%,
+      transparent 48%),
+    radial-gradient(circle at 84% 100%,
       rgba(184, 101, 66, 0.94) 0%,
       rgba(184, 101, 66, 0.72) 16%,
       rgba(184, 101, 66, 0.14) 34%,
-      transparent 48%
-    ),
-    radial-gradient(
-      circle at 50% 104%,
+      transparent 48%),
+    radial-gradient(circle at 50% 104%,
       rgba(173, 104, 84, 0.8) 0%,
       rgba(173, 104, 84, 0.54) 18%,
       rgba(173, 104, 84, 0.12) 36%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 50% 134%,
+      transparent 50%),
+    radial-gradient(circle at 50% 134%,
       rgba(255, 118, 54, 0.98) 0%,
       rgba(255, 118, 54, 0.9) 16%,
       rgba(255, 118, 54, 0.42) 34%,
-      transparent 54%
-    );
+      transparent 54%);
   filter: blur(14px);
   opacity: 0.92;
 }
@@ -247,13 +237,11 @@
   line-height: 1;
   color: transparent;
   background-image:
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(255, 255, 255, 0.98) 0%,
       rgba(255, 255, 255, 0.98) 50%,
       rgba(249, 235, 224, 0.86) 50%,
-      rgba(249, 235, 224, 0.86) 100%
-    );
+      rgba(249, 235, 224, 0.86) 100%);
   background-size: 200% 100%;
   background-position: 100% 50%;
   background-repeat: no-repeat;
@@ -351,34 +339,26 @@
   inset: -12% -10% -18%;
   pointer-events: none;
   background:
-    radial-gradient(
-      circle at 16% 100%,
+    radial-gradient(circle at 16% 100%,
       rgba(211, 133, 74, 0.82) 0%,
       rgba(211, 133, 74, 0.44) 16%,
       rgba(211, 133, 74, 0.08) 34%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 84% 100%,
+      transparent 50%),
+    radial-gradient(circle at 84% 100%,
       rgba(184, 101, 66, 0.82) 0%,
       rgba(184, 101, 66, 0.44) 16%,
       rgba(184, 101, 66, 0.08) 34%,
-      transparent 50%
-    ),
-    radial-gradient(
-      circle at 50% 104%,
+      transparent 50%),
+    radial-gradient(circle at 50% 104%,
       rgba(173, 104, 84, 0.58) 0%,
       rgba(173, 104, 84, 0.26) 18%,
       rgba(173, 104, 84, 0.06) 36%,
-      transparent 52%
-    ),
-    radial-gradient(
-      circle at 50% 134%,
+      transparent 52%),
+    radial-gradient(circle at 50% 134%,
       rgba(255, 118, 54, 0.72) 0%,
       rgba(255, 118, 54, 0.34) 18%,
       rgba(255, 118, 54, 0.06) 38%,
-      transparent 56%
-    );
+      transparent 56%);
   opacity: 0;
   transform: translate3d(0, 16%, 0) scale(1.04);
   filter: blur(18px);
@@ -531,6 +511,7 @@
 }
 
 @keyframes prompt-caret-blink {
+
   0%,
   49% {
     opacity: 1;
@@ -673,11 +654,11 @@
   transition: transform 0.2s, background 0.2s;
 }
 
-.prompt-toggle input:checked + .prompt-toggle__track {
+.prompt-toggle input:checked+.prompt-toggle__track {
   background: #9cf2c8;
 }
 
-.prompt-toggle input:checked + .prompt-toggle__track::after {
+.prompt-toggle input:checked+.prompt-toggle__track::after {
   transform: translateX(14px);
   background: #1a1a2e;
 }
@@ -717,13 +698,11 @@
   text-decoration: none;
   color: transparent;
   background-image:
-    linear-gradient(
-      90deg,
+    linear-gradient(90deg,
       rgba(255, 255, 255, 0.98) 0%,
       rgba(255, 255, 255, 0.98) 50%,
       rgba(250, 236, 224, 0.82) 50%,
-      rgba(250, 236, 224, 0.82) 100%
-    );
+      rgba(250, 236, 224, 0.82) 100%);
   background-size: 200% 100%;
   background-position: 100% 50%;
   background-repeat: no-repeat;
@@ -1631,7 +1610,7 @@
   line-height: 1.6;
 }
 
-.product-warning-list li + li {
+.product-warning-list li+li {
   margin-top: 8px;
 }
 
@@ -1642,7 +1621,7 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.product-graph-ready > span {
+.product-graph-ready>span {
   width: 6px;
   height: 6px;
   flex: 0 0 auto;
@@ -1656,7 +1635,7 @@
   color: #fff;
 }
 
-.product-graph-ready--active > span {
+.product-graph-ready--active>span {
   background: #fff;
 }
 
@@ -3138,8 +3117,15 @@
 }
 
 @keyframes bannerSlideIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .product-iteration-banner__header {
@@ -3234,7 +3220,9 @@
 }
 
 @keyframes graphSpinnerRotate {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Copilot Attachments */
@@ -3383,7 +3371,7 @@
   color: rgba(255, 239, 227, 0.8);
 }
 
-.simple-list li + li {
+.simple-list li+li {
   margin-top: 10px;
 }
 
@@ -3874,6 +3862,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .page-home::before,
   .hero-copy {
     opacity: 1;

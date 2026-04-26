@@ -19,6 +19,7 @@ import ProductKnowledgeGraph, {
 } from "../components/product/ProductKnowledgeGraph";
 import { getQueryGraph, postQuery, getProductGraph } from "../lib/api";
 import type { Citation, EvidenceUnit, QueryGraphResponse, QueryResponse } from "../types/lexai";
+import { getUsageStats } from "../lib/token-calculator";
 
 const productFilters: Array<{ key: ProductNodeCategory; label: string }> = [
   { key: "case", label: "Cases" },
@@ -79,21 +80,21 @@ function ProductToolbarIcon({
   kind,
 }: {
   kind:
-    | "graph"
-    | "list"
-    | "filter"
-    | "share"
-    | "search"
-    | "chevron"
-    | "spark"
-    | "message"
-    | "doc"
-    | "bookmark"
-    | "clock"
-    | "database"
-    | "settings"
-    | "plus"
-    | "send";
+  | "graph"
+  | "list"
+  | "filter"
+  | "share"
+  | "search"
+  | "chevron"
+  | "spark"
+  | "message"
+  | "doc"
+  | "bookmark"
+  | "clock"
+  | "database"
+  | "settings"
+  | "plus"
+  | "send";
 }) {
   const strokeProps = {
     fill: "none",
@@ -265,6 +266,7 @@ function ProductPage() {
   const [queryGraph, setQueryGraph] = useState<QueryGraphResponse | null>(null);
   const [queryError, setQueryError] = useState<string | null>(null);
   const [isQueryLoading, setIsQueryLoading] = useState(false);
+  const [usage, setUsage] = useState<any>(null);
   const [activeFilters, setActiveFilters] = useState<
     Record<ProductNodeCategory, boolean>
   >({
@@ -305,10 +307,10 @@ function ProductPage() {
     normalizedSearch.length === 0
       ? []
       : visibleNodes
-          .filter((node) =>
-            node.label.join(" ").toLowerCase().includes(normalizedSearch),
-          )
-          .map((node) => node.id);
+        .filter((node) =>
+          node.label.join(" ").toLowerCase().includes(normalizedSearch),
+        )
+        .map((node) => node.id);
 
   useEffect(() => {
     function getMaxAllowedWidth() {
@@ -430,6 +432,17 @@ function ProductPage() {
 
       if (queryRequestSeqRef.current !== requestSeq) return;
       setQueryResponse(response);
+
+      // Calculate and log usage JSON
+      const contextText = response.evidence_units.map((u) => u.raw_text ?? "").join(" ");
+      const usage = getUsageStats(
+        response.question ?? question,
+        contextText,
+        response.answer.short_answer,
+        response.answer.detailed_answer
+      );
+      console.log('Query Usage Stats (JSON):', JSON.stringify(usage, null, 2));
+      setUsage(usage);
 
       try {
         const graphResponse = await getQueryGraph(response.query_id);
@@ -554,6 +567,27 @@ function ProductPage() {
                         <p>{queryResponse.answer.detailed_answer}</p>
                       </details>
                     ) : null}
+
+                    {usage ? (
+                      <div style={{ marginTop: '1rem' }}>
+                        <button
+                          type="button"
+                          className="assistant-btn assistant-btn--secondary"
+                          style={{ fontSize: '0.75rem', padding: '0.2rem 0.6rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+                          onClick={() => {
+                            const blob = new Blob([JSON.stringify(usage, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `usage-${queryResponse.query_id}.json`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                        >
+                          Download Usage JSON
+                        </button>
+                      </div>
+                    ) : null}
                   </article>
 
                   <section className="product-answer-section">
@@ -631,11 +665,11 @@ function ProductPage() {
                       <div className="product-discovery-banner__header">
                         <span className="product-discovery-banner__badge">
                           {node.category === "root" ? "§" :
-                           node.category === "query" ? "Q" :
-                           node.category === "claim" ? "Cl" :
-                           node.category === "article" ? "Ar" :
-                           node.category === "paragraph" ? "Al" :
-                           node.category === "letter" ? "Lt" : "Pt"}
+                            node.category === "query" ? "Q" :
+                              node.category === "claim" ? "Cl" :
+                                node.category === "article" ? "Ar" :
+                                  node.category === "paragraph" ? "Al" :
+                                    node.category === "letter" ? "Lt" : "Pt"}
                         </span>
                         <strong className="product-discovery-banner__title">{node.label}</strong>
                       </div>
@@ -649,7 +683,7 @@ function ProductPage() {
                     <ProductToolbarIcon kind="spark" />
                   </div>
                   <strong>Începe o conversație nouă</strong>
-                  
+
                   <div className="product-chat-suggestions">
                     <button className="product-chat-suggestion" onClick={() => setPromptValue("Te rog să analizezi următoarele clauze contractuale pentru a identifica prevederi abuzive:")}>
                       <div className="product-chat-suggestion-icon"><ProductToolbarIcon kind="doc" /></div>
@@ -690,8 +724,8 @@ function ProductPage() {
               {iteratingNodes.length > 0 ? (
                 <div className="product-copilot-attachments">
                   {iteratingNodes.map((node, i) => (
-                    <button 
-                      key={node.id} 
+                    <button
+                      key={node.id}
                       className={`product-copilot-pill${i === currentIteratingIndex ? ' is-active' : ''}`}
                       onClick={() => {
                         setCurrentIteratingIndex(i);
@@ -766,9 +800,9 @@ function ProductPage() {
 
         {!showGraph ? (
           <div className="product-workspace-spacer">
-            <ProductForceGraph 
-              ref={forceGraphRef} 
-              hideParagraphs={hideParagraphs} 
+            <ProductForceGraph
+              ref={forceGraphRef}
+              hideParagraphs={hideParagraphs}
               onNodesDiscovered={handleNodesDiscovered}
               queryGraph={queryGraph}
               highlightedNodeIds={queryGraph?.highlighted_node_ids}
@@ -853,7 +887,7 @@ function ProductPage() {
                       </div>
                     </>
                   )}
-                  
+
                   <div className="product-iteration-banner__stats">
                     <div className="product-iteration-stat">
                       <dt>Connected</dt>
@@ -871,24 +905,24 @@ function ProductPage() {
 
                   <div className="product-iteration-banner__footer">
                     <span>
-                      {currentIteratingIndex === -1 
+                      {currentIteratingIndex === -1
                         ? `Found ${iteratingNodes.length}/${graphStats.articles} relevant articles`
                         : `Matched ${currentIteratingIndex + 1}/${iteratingNodes.length} articles`
                       }
                     </span>
                     <div className="product-iteration-banner__progress-bar">
-                      <div 
-                        className="product-iteration-banner__progress-fill" 
-                        style={{ 
-                          width: currentIteratingIndex === -1 
-                            ? '100%' 
-                            : `${((currentIteratingIndex + 1) / iteratingNodes.length) * 100}%` 
+                      <div
+                        className="product-iteration-banner__progress-fill"
+                        style={{
+                          width: currentIteratingIndex === -1
+                            ? '100%'
+                            : `${((currentIteratingIndex + 1) / iteratingNodes.length) * 100}%`
                         }}
                       />
                     </div>
                   </div>
 
-                  <button 
+                  <button
                     className="product-iteration-banner__close"
                     onClick={() => {
                       setIteratingNodes([]);
