@@ -72,9 +72,9 @@ function HomePage() {
   }, []);
 
   const handleSend = () => {
-    if (promptValue.trim()) {
-      navigate(`/explore?q=${encodeURIComponent(promptValue)}`);
-    }
+    const query = promptValue.trim();
+    if (!query) return;
+    navigate(`/product?q=${encodeURIComponent(query)}`);
   };
 
   return (
