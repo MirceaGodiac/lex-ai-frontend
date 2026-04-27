@@ -6,6 +6,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { Link } from "react-router-dom";
 import PromptComposer from "../components/PromptComposer";
 import ProductBackgroundCanvas from "../components/product/ProductBackgroundCanvas";
 import ProductForceGraph, {
@@ -26,6 +27,7 @@ import type {
   QueryResponse,
   VerifierPayload,
 } from "../types/lexai";
+import brandLogo from "../../LoDi-LoDi-Capital_letter_L_featu...-Apr_25_2026_17-01-r2j3avfe-removebg-preview.png.svg";
 
 const productFilters: Array<{ key: ProductNodeCategory; label: string }> = [
   { key: "case", label: "Cases" },
@@ -555,6 +557,9 @@ function ProductToolbarIcon({
 
 function ProductPage() {
   const [searchParams] = useSearchParams();
+  const productBrandMaskStyle = {
+    "--brand-mark-mask": `url("${brandLogo}")`,
+  } as CSSProperties;
   const showGraph = false;
   const assistantMinWidth = 360;
   const assistantMaxWidth = 900;
@@ -585,6 +590,8 @@ function ProductPage() {
     getDefaultAssistantWidth,
   );
   const [isAssistantCollapsed, setIsAssistantCollapsed] = useState(false);
+  const [isAssistantExpanding, setIsAssistantExpanding] = useState(false);
+  const [isAssistantMinimizing, setIsAssistantMinimizing] = useState(false);
   const [isResizingAssistant, setIsResizingAssistant] = useState(false);
   const [hideParagraphs, setHideParagraphs] = useState(false);
   const [discoveredNodes, setDiscoveredNodes] = useState<ProductForceGraphNode[]>([]);
@@ -634,9 +641,6 @@ function ProductPage() {
     };
   }, [showGraph]);
 
-  const [isHighlightingPoints, setIsHighlightingPoints] = useState(false);
-  const [discoveryProgress, setDiscoveryProgress] = useState(0);
-  const [graphStats, setGraphStats] = useState({ totalNodes: 0, totalLinks: 0, articles: 0 });
   const [iteratingNodes, setIteratingNodes] = useState<ProductForceGraphNode[]>([]);
   const [currentIteratingIndex, setCurrentIteratingIndex] = useState(-1);
 
@@ -650,6 +654,11 @@ function ProductPage() {
     (edge) =>
       visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
   );
+  const graphStats = {
+    totalNodes: productNodes.length,
+    totalLinks: productEdges.length,
+    articles: productNodes.filter((node) => node.category === "statute").length,
+  };
   const visibleNodeIndex = new Map(visibleNodes.map((node) => [node.id, node]));
   const matchingNodeIds =
     normalizedSearch.length === 0
@@ -851,10 +860,45 @@ function ProductPage() {
       <ProductBackgroundCanvas />
 
       <div className={workspaceClassName} style={workspaceStyle}>
+        <div className="product-assistant-dock" aria-hidden={!isAssistantCollapsed}>
+          <Link to="/" className="product-assistant-title product-assistant-title--dock">
+            <span
+              className="product-assistant-brand-mark"
+              style={productBrandMaskStyle}
+              aria-hidden="true"
+            >
+              <span className="product-assistant-brand-fill" />
+            </span>
+            <strong>LexAi</strong>
+          </Link>
+
+          <button
+            type="button"
+            className="product-assistant-toggle product-assistant-toggle--floating"
+            aria-label="Open assistant"
+            onClick={() => {
+              setIsAssistantExpanding(true);
+              setIsAssistantCollapsed(false);
+            }}
+          >
+            <ProductToolbarIcon kind="chevron" />
+          </button>
+        </div>
+
         <aside
           ref={assistantRef}
-          className={`product-assistant${isAssistantCollapsed ? " product-assistant--collapsed" : ""}`}
+          className={`product-assistant${isAssistantCollapsed ? " product-assistant--collapsed" : ""}${isAssistantExpanding ? " product-assistant--expanding" : ""}${isAssistantMinimizing ? " product-assistant--minimizing" : ""}`}
           aria-hidden={isAssistantCollapsed}
+          onAnimationEnd={() => {
+            if (isAssistantMinimizing) {
+              setIsAssistantMinimizing(false);
+              setIsAssistantCollapsed(true);
+            }
+
+            if (isAssistantExpanding) {
+              setIsAssistantExpanding(false);
+            }
+          }}
         >
           <button
             type="button"
@@ -877,23 +921,39 @@ function ProductPage() {
 
           <div className="product-assistant-card">
             <div className="product-assistant-header">
-              <div className="product-assistant-title">
-                <ProductToolbarIcon kind="spark" />
-                <strong>LexAI</strong>
-              </div>
+              <Link to="/" className="product-assistant-title">
+                <span
+                  className="product-assistant-brand-mark"
+                  style={productBrandMaskStyle}
+                  aria-hidden="true"
+                >
+                  <span className="product-assistant-brand-fill" />
+                </span>
+                <strong>LexAi</strong>
+              </Link>
 
-              <span className="product-ready-badge">
-                <span />
-                {isQueryLoading
-                  ? "Running"
-                  : queryGraph
-                    ? "Graph ready"
-                    : graphError
-                      ? "Graph unavailable"
-                      : isGraphLoading
-                        ? "Graph loading"
-                        : "Ready"}
-              </span>
+              <div className="product-assistant-actions">
+                <span className="product-ready-badge">
+                  <span />
+                  {isQueryLoading
+                    ? "Running"
+                    : queryGraph
+                      ? "Graph ready"
+                      : graphError
+                        ? "Graph unavailable"
+                        : isGraphLoading
+                          ? "Graph loading"
+                          : "Ready"}
+                </span>
+                <button
+                  type="button"
+                  className="product-assistant-toggle"
+                  aria-label="Minimize assistant"
+                  onClick={() => setIsAssistantMinimizing(true)}
+                >
+                  <ProductToolbarIcon kind="chevron" />
+                </button>
+              </div>
             </div>
 
             <div className="product-assistant-notice">
@@ -1093,43 +1153,6 @@ function ProductPage() {
                 onChange={setPromptValue}
                 onSend={handleSend}
                 ariaLabel="Ask a legal question or request"
-                secondaryButton={
-                  queryGraph ? (
-                  <button
-                    type="button"
-                    className={`prompt-icon-button${isHighlightingPoints ? " is-active" : ""}`}
-                    disabled={isHighlightingPoints}
-                    onClick={async () => {
-                      if (forceGraphRef.current) {
-                        setIsHighlightingPoints(true);
-                        setIteratingNodes([]);
-                        setCurrentIteratingIndex(-1);
-                        setDiscoveryProgress(0);
-                        try {
-                          const nodes = await forceGraphRef.current.highlightPointsGradually(15, (p) => setDiscoveryProgress(p));
-                          setIteratingNodes(nodes);
-                          setGraphStats(forceGraphRef.current.getGraphStats());
-                          if (nodes.length > 0) {
-                            setCurrentIteratingIndex(-1);
-                            forceGraphRef.current.focusOverview();
-                          }
-                        } finally {
-                          setIsHighlightingPoints(false);
-                        }
-                      }
-                    }}
-                    title="Highlight random points"
-                  >
-                    {isHighlightingPoints ? (
-                      <div className="product-discovery-counter">
-                        {discoveryProgress}
-                      </div>
-                    ) : (
-                      <ProductToolbarIcon kind="spark" />
-                    )}
-                  </button>
-                  ) : null
-                }
                 toolbarExtra={
                   <label className="prompt-toggle" title="Hide alineat nodes">
                     <input

@@ -50,12 +50,12 @@ interface GraphLink extends LinkObject {
 
 const categoryColor: Record<LegalCategory, string> = {
   root: '#303036',
-  query: '#263b68',
-  claim: '#3a2f58',
-  article: '#1e1e22',
-  paragraph: '#18181b',
-  letter: '#141416',
-  point: '#111113',
+  query: '#5d3525',
+  claim: '#43261f',
+  article: '#211c1a',
+  paragraph: '#181513',
+  letter: '#141111',
+  point: '#11100f',
 }
 
 const categoryBadge: Record<LegalCategory, string> = {
@@ -293,15 +293,23 @@ export interface ProductForceGraphHandle {
 interface ProductForceGraphProps {
   hideParagraphs?: boolean
   onNodesDiscovered?: (nodes: GraphNode[]) => void
+  onZoomChange?: (scale: number) => void
   queryGraph?: QueryGraphResponse | null
   highlightedNodeIds?: string[]
   highlightedEdgeIds?: string[]
   disableLocalFallback?: boolean
 }
 
+function isLikelyTrackpadPan(event: WheelEvent) {
+  if (event.ctrlKey || event.metaKey) return false
+
+  return Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) < 24
+}
+
 const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphProps>(function ProductForceGraph({
   hideParagraphs = false,
   onNodesDiscovered,
+  onZoomChange,
   queryGraph = null,
   highlightedNodeIds: highlightedNodeIdsProp,
   highlightedEdgeIds: highlightedEdgeIdsProp,
@@ -313,6 +321,8 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null)
   const [isGraphReady, setIsGraphReady] = useState(false)
   const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null)
+  const [cursorGlowPos, setCursorGlowPos] = useState<{ x: number; y: number } | null>(null)
+  const [isCursorInside, setIsCursorInside] = useState(false)
   const [bannerVisible, setBannerVisible] = useState(false)
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<Set<string>>(new Set())
   const [highlightedLinkIds, setHighlightedLinkIds] = useState<Set<string>>(new Set())
@@ -373,6 +383,30 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
         setHoverPos(null)
       }, 280)
     }
+  }, [])
+
+  const updateCursorGlow = useCallback((clientX: number, clientY: number) => {
+    const element = containerRef.current
+    if (!element) return
+
+    const bounds = element.getBoundingClientRect()
+    setCursorGlowPos({
+      x: clientX - bounds.left,
+      y: clientY - bounds.top,
+    })
+  }, [])
+
+  const handlePointerEnter = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    setIsCursorInside(true)
+    updateCursorGlow(event.clientX, event.clientY)
+  }, [updateCursorGlow])
+
+  const handlePointerMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    updateCursorGlow(event.clientX, event.clientY)
+  }, [updateCursorGlow])
+
+  const handlePointerLeave = useCallback(() => {
+    setIsCursorInside(false)
   }, [])
 
   const flyToNode = useCallback((targetNode: GraphNode, customHighlights?: { nodes: Set<string>, links: Set<string> } | null, duration = 3000) => {
@@ -756,9 +790,53 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
       </div>
     )
   }
+  useEffect(() => {
+    const element = containerRef.current
+    const graph = graphRef.current
+
+    if (!element || !graph) return
+
+    function handleWheel(event: WheelEvent) {
+      if (!isLikelyTrackpadPan(event)) return
+
+      event.preventDefault()
+
+      const center = graph.centerAt()
+      const zoom = graph.zoom()
+
+      if (!center || !zoom) return
+
+      graph.centerAt(
+        center.x + event.deltaX / zoom,
+        center.y + event.deltaY / zoom,
+        0,
+      )
+    }
+
+    element.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      element.removeEventListener('wheel', handleWheel)
+    }
+  }, [size.width, size.height, data])
 
   return (
-    <div ref={containerRef} className="product-force-graph">
+    <div
+      ref={containerRef}
+      className="product-force-graph"
+      onMouseEnter={handlePointerEnter}
+      onMouseMove={handlePointerMove}
+      onMouseLeave={handlePointerLeave}
+    >
+      <div
+        className={`product-force-graph-glow${isCursorInside ? ' is-visible' : ''}`}
+        style={{
+          left: cursorGlowPos?.x ?? -999,
+          top: cursorGlowPos?.y ?? -999,
+        }}
+        aria-hidden="true"
+      />
+
       {size.width > 0 && size.height > 0 ? (
         <ForceGraph2D<ProductForceGraphNode, GraphLink>
           ref={graphRef}
@@ -766,13 +844,23 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
           width={size.width}
           height={size.height}
           backgroundColor="rgba(0,0,0,0)"
+          minZoom={0.2}
           linkCurvature={0.2}
           linkDirectionalArrowLength={3.5}
           linkDirectionalArrowRelPos={1}
           nodeRelSize={3}
+          enableZoomInteraction={(event) => {
+            return !(event instanceof WheelEvent && isLikelyTrackpadPan(event))
+          }}
           nodeVal={(node) => (node as GraphNode).val}
           nodeColor={(node) => categoryColor[(node as GraphNode).category]}
           nodeLabel={() => ''}
+          onZoom={(transform) => {
+            onZoomChange?.(transform.k)
+          }}
+          onZoomEnd={(transform) => {
+            onZoomChange?.(transform.k)
+          }}
           onNodeHover={handleNodeHover}
           linkColor={(link) => {
             const source = (typeof link.source === 'object' ? link.source : null) as GraphNode | null
@@ -803,14 +891,14 @@ const ProductForceGraph = forwardRef<ProductForceGraphHandle, ProductForceGraphP
               const elapsed = (performance.now() - highlightStartRef.current) / 1000
               const pulse = 0.7 + 0.3 * Math.sin(elapsed * 4)
               const baseOpacity = isHighlighted || isStrong ? 0.95 : 0.72
-              return `rgba(140, 180, 255, ${(baseOpacity * pulse).toFixed(2)})`
+              return `rgba(232, 153, 98, ${(baseOpacity * pulse).toFixed(2)})`
             }
 
             // Strengthen as we zoom in: opacity goes from ~0.16 up to ~0.45
             const opacity = edgeType === 'contains'
               ? Math.min(0.32, 0.12 + (gs - 0.5) * 0.12)
               : Math.min(0.52, 0.22 + (gs - 0.5) * 0.18)
-            return `rgba(200, 210, 235, ${opacity.toFixed(2)})`
+            return `rgba(228, 209, 194, ${opacity.toFixed(2)})`
           }}
           linkWidth={(link) => {
             const sourceId = getEndpointId(link.source)

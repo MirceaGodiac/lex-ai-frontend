@@ -90,7 +90,6 @@ export default function ProductBackgroundCanvas() {
   const [surfaceSize, setSurfaceSize] = useState<SurfaceSize>({ width: 0, height: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [hoverWorldPoint, setHoverWorldPoint] = useState<CanvasPoint | null>(null)
-  const [zoomReadout, setZoomReadout] = useState(INITIAL_SCALE)
   const [isReducedMotion] = useState(prefersReducedMotion)
   const x = useMotionValue(0)
   const y = useMotionValue(0)
@@ -130,7 +129,6 @@ export default function ProductBackgroundCanvas() {
     x.set(clampedViewport.x)
     y.set(clampedViewport.y)
     scale.set(clampedViewport.scale)
-    setZoomReadout(clampedViewport.scale)
   }, [clampViewport, scale, x, y])
 
   const zoomAtPoint = useCallback((nextScale: number, point: CanvasPoint) => {
@@ -440,12 +438,9 @@ export default function ProductBackgroundCanvas() {
           cursor: isDragging ? 'grabbing' : 'grab',
           touchAction: 'none',
           overscrollBehavior: 'none',
-          backgroundColor: '#05070b',
+          backgroundColor: '#070505',
         }}
       >
-        <div className="product-background-canvas__zoom-readout">
-          scale {zoomReadout.toFixed(3)}
-        </div>
         <motion.div
           className="product-background-canvas__world"
           style={{
@@ -453,15 +448,16 @@ export default function ProductBackgroundCanvas() {
             y,
             scale,
             willChange: 'transform',
-            backgroundColor: '#05070b',
+            backgroundColor: '#070505',
             backgroundImage: `
-              linear-gradient(rgba(112, 145, 201, 0.16) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(112, 145, 201, 0.16) 1px, transparent 1px),
-              linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px)
+              radial-gradient(circle at 50% 58%, rgba(209, 138, 74, 0.07), transparent 34%),
+              linear-gradient(rgba(209, 138, 74, 0.145) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(209, 138, 74, 0.145) 1px, transparent 1px),
+              linear-gradient(rgba(255, 236, 223, 0.038) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(255, 236, 223, 0.038) 1px, transparent 1px)
             `,
-            backgroundSize: `${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
-            backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
+            backgroundSize: `100% 100%, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
+            backgroundPosition: 'center, -1px -1px, -1px -1px, -1px -1px, -1px -1px',
           }}
         />
         <motion.div
@@ -473,13 +469,14 @@ export default function ProductBackgroundCanvas() {
             willChange: 'transform, opacity',
             opacity: activeHoverWorldPoint ? 1 : 0,
             backgroundImage: `
-              linear-gradient(rgba(152, 107, 255, 0.72) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(65, 104, 255, 0.72) 1px, transparent 1px),
-              linear-gradient(rgba(152, 107, 255, 0.28) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(65, 104, 255, 0.28) 1px, transparent 1px)
+              radial-gradient(circle at 50% 50%, rgba(255, 145, 88, 0.1), transparent 26%),
+              linear-gradient(rgba(255, 145, 88, 0.74) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(196, 111, 70, 0.78) 1px, transparent 1px),
+              linear-gradient(rgba(255, 145, 88, 0.26) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(196, 111, 70, 0.26) 1px, transparent 1px)
             `,
-            backgroundSize: `${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
-            backgroundPosition: '-1px -1px, -1px -1px, -1px -1px, -1px -1px',
+            backgroundSize: `100% 100%, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MAJOR_SIZE}px ${GRID_MAJOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px, ${GRID_MINOR_SIZE}px ${GRID_MINOR_SIZE}px`,
+            backgroundPosition: 'center, -1px -1px, -1px -1px, -1px -1px, -1px -1px',
             maskImage: hoverMask,
             WebkitMaskImage: hoverMask,
           }}
